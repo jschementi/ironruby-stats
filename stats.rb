@@ -90,6 +90,17 @@ module Stats
     end
     results.to_f
   end
+  
+  def mspec(type)
+    unless [:core, :lang, :lib].include?(type)
+      puts "\"#{type}\" is not a valid mspec option"
+      exit
+    end
+    FileUtils.cd(RB) do
+      results = `rake mspec:#{type}`
+    end
+    
+  end
 end
 
 #
@@ -140,29 +151,36 @@ end
 # Run the report
 #
 
-def help
-  <<-EOS
-usage:
-  ruby stats.rb [--all] [--build] [--binary] [--repo] [--startup] [--throughput] [-h|--help]
-EOS
+$behavior = {
+  ['--help', '-h'] => lambda { puts usage; exit },
+  ['--all']        => lambda { Report.run :all },
+  ['--build']      => lambda { Report.run :build },
+  ['--binary']     => lambda { Report.run :size_of_binary },
+  ['--repo']       => lambda { Report.run :github_size },
+  ['--startup']    => lambda { Report.run :startup },
+  ['--tput']       => lambda { Report.run :throughput },
+  ['--console']    => lambda { puts 'Running in console mode' }
+}
+
+def usage
+  o = "usage:\n  ruby #{__FILE__}"
+  $behavior.map{|opts, _| ' [' + opts.join('|') + ']'}.each{|i| o << i}
+  o
 end
 
 if ARGV.empty?
-  puts help
+  puts usage
 end
 
 ARGV.each do |arg|
-  case arg
-  when /--help/, /-h/: 
-    puts help
-    exit
-  when /--all/      : Report.run :all
-  when /--build/    : Report.run :build
-  when /--binary/   : Report.run :size_of_binary
-  when /--repo/     : Report.run :github_size
-  when /--startup/  : Report.run :startup
-  when /--throughput/  : Report.run :throughput
-  else
+  found = false
+  $behavior.each do |options, lmbd|
+    if options.include?(arg)
+      found = true
+      lmbd.call
+    end
+  end
+  unless found 
     puts "Unknown argument '#{arg}'"
     puts help
     exit
