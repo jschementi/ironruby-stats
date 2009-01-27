@@ -93,22 +93,36 @@ module Stats
   end
   
   def mspec(type = nil)
-    types = [:core, :lang, :lib]
-    types.each {|t| FileUtils.rm "#{CD}/mspec_#{t}.log" if File.exist? "#{CD}/mspec_#{t}.log" }
-    
     type ||= :core
-    unless types.include?(type)
-      puts "\"#{type}\" is not a valid mspec option"
-      exit
-    end
     
-    results = nil
-    FileUtils.cd(RB) do
-      print "Running mspec:#{type} ..."
-      system "rake mspec:#{type} > #{CD}/mspec_#{type}.log"
+    # since running mspec takes a while, only run if the log file is not present
+    unless File.exist? "#{CD}/mspec_#{type}.log"
+      unless [:core, :lang, :lib].include?(type)
+        puts "\"#{type}\" is not a valid mspec option"
+        exit
+      end
+      
+      results = nil
+      FileUtils.cd(RB) do
+        print "Running mspec:#{type} ..."
+        system "rake mspec:#{type} > #{CD}/mspec_#{type}.log"
+      end
     end
-    
-    File.open("#{CD}/mspec_#{type}.log", "r") { |f| f.read }
+     
+    pmr File.open("#{CD}/mspec_#{type}.log", "r") { |f| f.read }
+  end
+
+  # Parse MSpec Results 
+  def pmr(results)
+    data = {}
+    parser = /Finished in (.*? seconds)\n\n(.*? files), (.*? examples), (.*? expectations), (.*? failures), (.*? errors)/
+    results.scan(parser) do |parsed|
+      parsed.each do |node|
+        s = node.split(' ')
+        data[s.last.to_sym] = s.first
+      end
+    end
+    data
   end
 end
 
@@ -146,15 +160,15 @@ class Report
     end
 
     def report_mspec_core
-      dmr pmr(mspec(:core))
+      dmr mspec(:core)
     end
     
     def report_mspec_lang
-      dmr pmr(mspec(:lang))
+      dmr mspec(:lang)
     end
     
     def report_mspec_lib
-      dmr pmr(mspec(:lib))
+      dmr mspec(:lib)
     end
 
     def report_all
@@ -170,24 +184,12 @@ class Report
     end
     
   private
+
     # Display Parsed MSpec Results 
     def dmr(results)
       results.each do |k,v| puts "#{k}:\t#{v}" end
     end
-  
-    # Parse MSpec Results 
-    def pmr(results)
-      data = {}
-      parser = /Finished in (.*? seconds)\n\n(.*? files), (.*? examples), (.*? expectations), (.*? failures), (.*? errors)/
-      results.scan(parser) do |parsed|
-        parsed.each do |node|
-          s = node.split(' ')
-          data[s.last.to_sym] = s.first
-        end
-      end
-      data
-    end
-  end
+  end 
   
 end
 
