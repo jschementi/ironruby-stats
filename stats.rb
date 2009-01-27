@@ -120,11 +120,11 @@ class Report
       puts "Build time: #{build.real.round_to(2)} seconds"
     end
   
-    def report_size_of_binaries
+    def report_binsize
       puts "Binary size: #{mb(total_binary_size(size_of_binaries))}MB"
     end
   
-    def report_github_size
+    def report_repo
       puts "Github repo size: #{mb(github_size)} MB"
     end
   
@@ -137,11 +137,15 @@ class Report
     end
 
     def report_all
-      methods.sort.each do |m|
-        if m =~ /report_(.*)/ && $1 != 'all'
-          send(m)
-        end
+      reports.each {|m| send(m) if reports.include?(m)}
+    end
+    
+    def reports
+      list = methods(false).sort.select { |m| m =~ /report_(.*)/ && $1 != 'all' }
+      if i = list.index('report_build')
+        list[0], list[i] = list[i], list[0]
       end
+      list
     end
   end
   
@@ -154,13 +158,16 @@ end
 $behavior = {
   ['--help', '-h'] => lambda { puts usage; exit },
   ['--all']        => lambda { Report.run :all },
-  ['--build']      => lambda { Report.run :build },
-  ['--binary']     => lambda { Report.run :size_of_binary },
-  ['--repo']       => lambda { Report.run :github_size },
-  ['--startup']    => lambda { Report.run :startup },
-  ['--tput']       => lambda { Report.run :throughput },
   ['--console']    => lambda { puts 'Running in console mode' }
-}
+}.merge(
+  # generate a ['--#{name}'] => lambda { Report.run name } 
+  # for each report in Report.reports
+  Report.reports.inject({}) do |opts, r|
+    name = r.split('report_').last
+    opts[["--#{name}"]] = lambda { Report.run name.to_sym }
+    opts
+  end
+)
 
 def usage
   o = "usage:\n  ruby #{__FILE__}"
