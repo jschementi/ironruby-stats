@@ -1,10 +1,20 @@
 IronRuby-stats
 
+A script for capturing interesting statistics about IronRuby
+
 == Pre-requisites
 1. git clone git://github.com/ironruby/ironruby.git
 2. Set up IronRuby for building: http://wiki.github.com/ironruby/ironruby
 
-== Running
+== Configuration
 
-ruby stats.rb
+Update config.rb with the path to your IronRuby repository (from step 1 above).
 
+For example, if you ran the "git clone" command in c:/dev, then this would be
+your REPO value:
+
+REPO = 'c:/dev/ironruby'
+
+== Usage
+
+ruby stats.rb [--all] [--build] [--binary] [--repo] [--startup] [--throughput] [-h|--help]
