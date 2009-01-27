@@ -187,7 +187,6 @@ class Report
       parser = /Finished in (.*? seconds)\n\n(.*? files), (.*? examples), (.*? expectations), (.*? failures), (.*? errors)/
       results.scan(parser) do |parsed|
         parsed.each do |node|
-          puts node.inspect
           s = node.split(' ')
           data[s.last.to_sym] = s.first
         end
