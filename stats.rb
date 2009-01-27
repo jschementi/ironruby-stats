@@ -57,9 +57,10 @@ module Stats
   include Helpers
   
   def build
-    FileUtils.rm "#{CD}/compile.log"
-    Benchmark.measure do
-      FileUtils.cd(RB) { system "rake compile > #{CD}/compile.log" }
+    unless File.exist? "#{CD}/compile.log"
+      Benchmark.measure do
+        FileUtils.cd(RB) { system "rake compile > #{CD}/compile.log" }
+      end
     end
   end
 
