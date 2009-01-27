@@ -17,4 +17,7 @@ REPO = 'c:/dev/ironruby'
 
 == Usage
 
-ruby stats.rb [--all] [--build] [--binary] [--repo] [--startup] [--throughput] [-h|--help]
+ruby stats.rb [--help|-h] [--all] [--clean]
+  [--mspec_core] [--mspec_lang] [--mspec_lib]
+  [--build] [--binsize] [--repo] [--startup] [--throughput]
+  [--console]

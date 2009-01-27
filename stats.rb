@@ -219,7 +219,7 @@ def clean
 end
 
 def usage
-  o = "usage:\n  ruby #{__FILE__[2..-1]}"
+  o = "usage:\n  ruby #{__FILE__}"
   $behavior.map{|opts, _| ' [' + opts.join('|') + ']'}.each{|i| o << i}
   o
 end
