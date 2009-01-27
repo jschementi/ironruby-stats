@@ -112,12 +112,6 @@ module Stats
   end
 end
 
-class SSS
-  class << self
-    include Stats
-  end
-end
-
 #
 # Reporting
 #
