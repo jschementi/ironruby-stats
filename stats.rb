@@ -1,12 +1,16 @@
 load 'config.rb'
+
 RB = "#{REPO}/Merlin/Main/Languages/Ruby"
 BIN = "#{REPO}/Merlin/Main/Bin/debug"
 CD = File.expand_path(File.dirname(__FILE__))
+DATA = "#{CD}/data"
+IR_OPTIONS = "-X:Interpret"
+IR = "#{BIN}/ir.exe #{IR_OPTIONS}"
+MSPEC = "mspec.bat run -fs -Gcritical"
 
 require 'fileutils'
 require 'mymath'
 require 'benchmark'
-require 'pp'
 
 #
 # Helpers
@@ -32,18 +36,19 @@ module Helpers
   def get_ironruby_from_github
     print "Downloading IronRuby from GitHub ... "
     
-    FileUtils.rm 'ironruby.zip' if File.exist?("ironruby.zip")
+    filename = "#{DATA}/ironruby.zip"
+    FileUtils.rm filename if File.exist?(filename)
     resp = fetch("http://github.com/ironruby/ironruby/zipball/master")
     size = 0
     
-    open('ironruby.zip', 'wb') do |file|
+    open(filename, 'wb') do |file|
       size = file.write(resp.body)
-      yield 'ironruby.zip' if block_given?
+      yield filename if block_given?
     end
     
     puts "done"
     
-    {:size => size, :filename => 'ironruby.zip'}
+    {:size => size, :filename => filename}
   end
 
   def total_binary_size(binaries)
@@ -63,9 +68,12 @@ module Stats
   include Helpers
   
   def build
-    Benchmark.measure do
-      FileUtils.cd(RB) { system "rake compile > #{CD}/compile.log" }
+    print "Building IronRUby ... "
+    result = Benchmark.measure do
+      FileUtils.cd(RB) { system "rake compile > #{DATA}/compile.log 2>&1" }
     end
+    puts "done"
+    result
   end
 
   def size_of_binaries
@@ -82,10 +90,8 @@ module Stats
   def startup_time
     print "Timing startup ... "
     results = nil
-    FileUtils.cd(BIN) do
-      results = Benchmark.measure do
-        `ir #{CD}/empty.rb`
-      end
+    results = Benchmark.measure do
+      `#{IR} #{CD}/empty.rb`
     end
     puts "done"
     results
@@ -93,10 +99,7 @@ module Stats
   
   def throughput
     print "Timing throughput ... "
-    results = nil
-    FileUtils.cd(BIN) do
-      results = `ir #{CD}/loop.rb`
-    end
+    results = `#{IR} #{CD}/loop.rb`
     puts "done"
     results.to_f
   end
@@ -106,20 +109,15 @@ module Stats
     
     # since running mspec takes a while, only run if the log file is not present
     print "Running mspec:#{type} ... "
-    unless File.exist? "#{CD}/mspec_#{type}.log"
-      unless [:core, :lang, :lib].include?(type)
-        puts "\"#{type}\" is not a valid mspec option"
-        exit
-      end
-      
+    unless File.exist? "#{DATA}/mspec_#{type}.log"
       results = nil
       FileUtils.cd(RB) do
-        system "rake mspec:#{type} > #{CD}/mspec_#{type}.log"
+        system "#{MSPEC} #{type} -T'#{IR_OPTIONS}' > #{CD}/mspec_#{type}.log 2>&1"
       end
     end
     puts "done"
      
-    pmr File.open("#{CD}/mspec_#{type}.log", "r") { |f| f.read }
+    pmr File.open("#{DATA}/mspec_#{type}.log", "r") { |f| f.read }
   end
 
   # Parse MSpec Results 
@@ -227,16 +225,16 @@ class DataReporter < BaseReporter
     mspec(:core)
   end
 
-  def report_mspec_lang
-    mspec(:lang)
+  def report_mspec_language
+    mspec(:language)
   end
 
-  def report_mspec_lib
-    mspec(:lib)
+  def report_mspec_libraries
+    mspec(:libraries)
   end
   
   def final
-    filename = "#{CD}/data-#{Time.now.strftime("%Y%m%d%H%M%S")}.dat"
+    filename = "#{DATA}/data-#{Time.now.strftime("%Y%m%d%H%M%S")}.dat"
     print "Writing #{filename} ... "
     File.open(filename, "wb") do |f|
       Marshal.dump(@data, f)
@@ -291,11 +289,11 @@ class TextReporter < BaseReporter
     dmr(data)
   end
   
-  def report_mspec_lang
+  def report_mspec_language
     dmr(data)
   end
   
-  def report_mspec_lib
+  def report_mspec_libraries
     dmr(data)
   end
   
@@ -332,7 +330,7 @@ $behavior = {
 
 def clean_data
   print 'removing data files ... '
-  Dir["#{CD}/data-*.dat"].each do |f|
+  Dir["#{DATA}/data-*.dat"].each do |f|
     FileUtils.rm f
   end
   puts 'done'
@@ -340,7 +338,7 @@ end
 
 def clean_log
   print 'removing log files ... '
-  Dir["#{CD}/*.log"].each do |f|
+  Dir["#{DATA}/*.log"].each do |f|
     FileUtils.rm f
   end
   puts 'done'

@@ -1,13 +1,18 @@
 require 'rubygems'
 require 'sinatra'
-require 'ruby-debug'
+
+def dbg
+  require 'ruby-debug'
+  Debugger.start
+  debugger
+end
 
 get '/' do
   stats = nil
-  File.open(Dir['data-*.dat'].sort.last, "rb") do |f|
+  File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
     stats = Marshal.load(f)
   end
-  debugger
+  dbg
   haml :index, :locals => {:stats => stats}
 end
 
@@ -30,16 +35,6 @@ __END__
 
 @@ index
 %h1 IronRuby Stats
-%h2 Binaries
-.group
-  %p
-    %b Build time
-    = stats[:build]
-    seconds
-  %p
-    %b Binary size
-    = stats[:binsize]
-    MB
 %h2 Performance
 .group
   %p
@@ -54,39 +49,54 @@ __END__
 .nest
   %h3 Language
   .group
-    = haml :mspec, :locals => {:mspec => stats[:mspec_lang]}, :layout => false
+    = haml :mspec, :locals => {:mspec => stats[:mspec_language]}, :layout => false
   %h3 Core
   .group
     = haml :mspec, :locals => {:mspec => stats[:mspec_core]}, :layout => false
   %h3 Lib
   .group
-    = haml :mspec, :locals => {:mspec => stats[:mspec_lib]}, :layout => false
+    = haml :mspec, :locals => {:mspec => stats[:mspec_libraries]}, :layout => false
 %h2 Source Code
 .group
   %p
     %b GitHub repository size
     = stats[:repo]
     MB
-
+%h2 Binaries
+.group
+  %p
+    %b Build time
+    = stats[:build]
+    seconds
+  %p
+    %b Binary size
+    = stats[:binsize]
+    MB
+    
 @@ mspec
-%p
-  = mspec[:seconds]
-  %b seconds
-%p
-  = mspec[:files]
-  %b files
-  ,
-  = mspec[:examples]
-  %b examples
-  ,
-  = mspec[:expectations]
-  %b expectations
-  ,
-  = mspec[:failures]
-  %b failures
-  ,
-  = mspec[:errors]
-  %b errors
+- if mspec.empty?
+  %p No data
+- elsif mspec.select{|_,v| v.to_f != 0}.empty?
+  %p No data
+- else
+  %p
+    = mspec[:seconds]
+    %b seconds
+  %p
+    = mspec[:files]
+    %b files
+    ,
+    = mspec[:examples]
+    %b examples
+    ,
+    = mspec[:expectations]
+    %b expectations
+    ,
+    = mspec[:failures]
+    %b failures
+    ,
+    = mspec[:errors]
+    %b errors
 
 @@ stylesheet
 body
