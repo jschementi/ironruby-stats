@@ -11,6 +11,7 @@ require 'pp'
 #
 # Helpers
 #
+
 require 'net/http'
 require 'uri'
 
@@ -19,6 +20,7 @@ module Helpers
     raise ArgumentError, 'HTTP redirect too deep' if limit == 0
 
     response = Net::HTTP.get_response(URI.parse(uri_str))
+    
     case response
     when Net::HTTPSuccess     then response
     when Net::HTTPRedirection then fetch(response['location'], limit - 1)
@@ -29,14 +31,18 @@ module Helpers
 
   def get_ironruby_from_github
     print "Downloading IronRuby from GitHub ... "
+    
     FileUtils.rm 'ironruby.zip' if File.exist?("ironruby.zip")
     resp = fetch("http://github.com/ironruby/ironruby/zipball/master")
     size = 0
+    
     open('ironruby.zip', 'wb') do |file|
       size = file.write(resp.body)
       yield 'ironruby.zip' if block_given?
     end
+    
     FileUtils.rm 'ironruby.zip'
+    
     {:size => size, :filename => 'ironruby.zip'}
   end
 
@@ -57,10 +63,8 @@ module Stats
   include Helpers
   
   def build
-    unless File.exist? "#{CD}/compile.log"
-      Benchmark.measure do
-        FileUtils.cd(RB) { system "rake compile > #{CD}/compile.log" }
-      end
+    Benchmark.measure do
+      FileUtils.cd(RB) { system "rake compile > #{CD}/compile.log" }
     end
   end
 
@@ -97,6 +101,7 @@ module Stats
     type ||= :core
     
     # since running mspec takes a while, only run if the log file is not present
+    print "Running mspec:#{type} ... "
     unless File.exist? "#{CD}/mspec_#{type}.log"
       unless [:core, :lang, :lib].include?(type)
         puts "\"#{type}\" is not a valid mspec option"
@@ -105,10 +110,10 @@ module Stats
       
       results = nil
       FileUtils.cd(RB) do
-        print "Running mspec:#{type} ..."
         system "rake mspec:#{type} > #{CD}/mspec_#{type}.log"
       end
     end
+    puts "done"
      
     pmr File.open("#{CD}/mspec_#{type}.log", "r") { |f| f.read }
   end
@@ -116,13 +121,19 @@ module Stats
   # Parse MSpec Results 
   def pmr(results)
     data = {}
-    parser = /Finished in (.*? seconds)\n\n(.*? files), (.*? examples), (.*? expectations), (.*? failures), (.*? errors)/
+    parser = /Finished in (.*? second)[s]?\n\n(.*? file)[s]?, (.*? example)[s]?, (.*? expectation)[s]?, (.*? failure)[s]?, (.*? error)[s]?/
+    
+    #cnvrsns = {:seconds => lambda {|i| i.to_f}}
+    
     results.scan(parser) do |parsed|
       parsed.each do |node|
         s = node.split(' ')
-        data[s.last.to_sym] = s.first
+        data["#{s.last}s".to_sym] = s.first
+        
+        #cnvrsns.each{|f,l| data[f] = l.call(data[f]) if data.has_key?(f)}
       end
     end
+    
     data
   end
 end
@@ -131,84 +142,175 @@ end
 # Reporting
 #
 
-class Report
-  class << self 
-    include Stats
-    include Helpers
-  
-    def run(type)
+class BaseReporter
+  include Stats
+  include Helpers
+
+  def initialize
+    @skip = []
+  end
+
+  def skip(type)
+    @skip << type
+  end
+
+  def run(type = :all)
+    return nil if @skip.include?(type)
+    
+    if type == :all
+      reports.each {|m| run(m)}
+    else
       send("report_#{type}")
     end
-  
-    def report_build
-      puts "Build time: #{build.real.round_to(2)} seconds"
-    end
-  
-    def report_binsize
-      puts "Binary size: #{mb(total_binary_size(size_of_binaries))}MB"
-    end
-  
-    def report_repo
-      puts "Github repo size: #{mb(github_size)} MB"
-    end
-  
-    def report_startup
-      puts "Startup time: #{startup_time.real.round_to(2)} seconds"
-    end
+  end
 
-    def report_throughput
-      puts "Throughput: (100000 iterations) #{throughput.round_to(2)} seconds"
-    end
-
-    def report_mspec_core
-      dmr mspec(:core)
+  def reports
+    list = methods.sort.select{|m| m =~ /report_(.*)/}.map{|m| m.split("report_").last.to_sym }
+    
+    # push build to the first task
+    if i = list.index(:build)
+      list[0], list[i] = list[i], list[0]
     end
     
-    def report_mspec_lang
-      dmr mspec(:lang)
-    end
-    
-    def report_mspec_lib
-      dmr mspec(:lib)
-    end
-
-    def report_all
-      reports.each {|m| send(m) if reports.include?(m)}
-    end
-    
-    def reports
-      list = methods(false).sort.select { |m| m =~ /report_(.*)/ && $1 != 'all' }
-      if i = list.index('report_build')
-        list[0], list[i] = list[i], list[0]
-      end
-      list
-    end
-    
-  private
-
-    # Display Parsed MSpec Results 
-    def dmr(results)
-      results.each do |k,v| puts "#{k}:\t#{v}" end
-    end
-  end 
-  
+    list
+  end
 end
+
+class DataReporter < BaseReporter
+  def initialize
+    @data = {}
+    super
+  end
+
+  def run(type)
+    data = super
+    
+    if data && type != :all
+      @data.merge!( data.kind_of?(Hash) ? data : {type.to_sym => data} )
+      data
+    else 
+      @data
+    end
+  end
+
+  def report_build
+    build.real.round_to(2)
+  end
+
+  def report_binsize
+    mb(total_binary_size(size_of_binaries))
+  end
+
+  def report_repo
+    mb(github_size)
+  end
+
+  def report_startup
+    startup_time.real.round_to(2)
+  end
+
+  def report_throughput
+    throughput.round_to(2)
+  end
+
+  def report_mspec_core
+    mspec(:core)
+  end
+
+  def report_mspec_lang
+    mspec(:lang)
+  end
+
+  def report_mspec_lib
+    mspec(:lib)
+  end
+end
+
+class TextReporter < BaseReporter
+  def initialize
+    @dr = DataReporter.new
+    @text = ""
+    super
+  end
+
+  def run(type)
+    @type = type
+    text = super
+    
+    if text && type != :all
+      @data = nil
+      @text << text
+      puts text
+    end
+  end
+  
+  def data
+    @data ||= @dr.run(@type)
+  end
+  
+  def report_build
+    "Build time: #{data} seconds\n"
+  end
+  
+  def report_binsize
+    "Binary size: #{data}MB\n"
+  end
+  
+  def report_repo
+    "Github repo size: #{data} MB\n"
+  end
+  
+  def report_startup
+    "Startup time: #{data} seconds\n"
+  end
+
+  def report_throughput
+    "Throughput: (100000 iterations) #{data} seconds\n"
+  end
+
+  def report_mspec_core
+    dmr(data)
+  end
+  
+  def report_mspec_lang
+    dmr(data)
+  end
+  
+  def report_mspec_lib
+    dmr(data)
+  end
+  
+  def final_report
+    puts @text
+  end
+  
+private
+  # Display Parsed MSpec Results 
+  def dmr(results)
+    results.inject("") { |s,(k,v)| s << "#{k}:\t#{v}\n"; s }
+  end
+end
+
+$default_reporter = DataReporter.new
 
 #
 # Run the report
 #
 
 $behavior = {
-  ['--help', '-h'] => lambda { puts usage; exit },
-  ['--all']        => lambda { Report.run :all },
-  ['--console']    => lambda { puts 'Running in console mode' },
-  ['--clean']      => lambda { clean }
+  ['--help', '-h']     => lambda { puts usage; exit },
+  ['--all']            => lambda { $default_reporter.run :all },
+  ['--clean']          => lambda { clean },
+  [/--reporter=(.*)/]  => lambda do |r|
+      $default_reporter = eval(r[1].capitalize + "Reporter").new
+    end,
 }.merge(
-  # generate a ['--#{name}'] => lambda { Report.run name } 
-  # for each report in Report.reports
-  Report.reports.inject({}) do |opts, r|
-    name = r.split('report_').last
-    opts[["--#{name}"]] = lambda { Report.run name.to_sym }
+  # generate a ['--#{name}'] => lambda { BaseReporter.run name } and
+  # generate a ['--skip-#{name} => lambda { BaseReporter.skip name }
+  # for each report in BaseReporter.reports
+  $default_reporter.reports.inject({}) do |opts, name|
+    opts[["--#{name}"]] = lambda { $default_reporter.run name.to_sym }
+    opts[["--skip-#{name}"]] = lambda { $default_reporter.skip name.to_sym }
     opts
   end
 )
@@ -233,13 +335,18 @@ end
 
 ARGV.each do |arg|
   found = false
+  
   $behavior.each do |options, lmbd|
     if options.include?(arg)
       found = true
       lmbd.call
+    elsif options.select{|o| o.kind_of?(Regexp) && arg =~ o}.size == 1
+      found = true
+      lmbd.call($~)
     end
   end
-  unless found 
+  
+  unless found
     puts "Unknown argument '#{arg}'"
     puts help
     exit
