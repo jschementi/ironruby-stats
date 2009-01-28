@@ -12,7 +12,7 @@ get '/' do
   File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
     stats = Marshal.load(f)
   end
-  dbg
+  
   haml :index, :locals => {:stats => stats}
 end
 
@@ -35,68 +35,74 @@ __END__
 
 @@ index
 %h1 IronRuby Stats
-%h2 Performance
-.group
-  %p
-    %b Startup time
-    = stats[:startup]
-    seconds
-  %p
-    %b Throughput (100000 iterations)
-    = stats[:throughput]
-    seconds
-%h2 RubySpec tests
-.nest
-  %h3 Language
-  .group
-    = haml :mspec, :locals => {:mspec => stats[:mspec_language]}, :layout => false
-  %h3 Core
-  .group
-    = haml :mspec, :locals => {:mspec => stats[:mspec_core]}, :layout => false
-  %h3 Lib
-  .group
-    = haml :mspec, :locals => {:mspec => stats[:mspec_libraries]}, :layout => false
-%h2 Source Code
-.group
-  %p
-    %b GitHub repository size
-    = stats[:repo]
-    MB
-%h2 Binaries
-.group
-  %p
-    %b Build time
-    = stats[:build]
-    seconds
-  %p
-    %b Binary size
-    = stats[:binsize]
-    MB
-    
+%table
+  %thead
+    %tr
+      %th{:colspan => 2} Performance
+  %tbody
+    %tr
+      %th Startup time
+      %td= "#{stats[:startup]} s"
+    %tr
+      %th Throughput (100000 iters)
+      %td= "#{stats[:throughput]} s"
+
+  %thead
+    %tr
+      %th{:colspan => 2} RubySpec
+  = haml :mspec, :locals => {:title => "Language", :mspec => stats[:mspec_language]}, :layout => false
+  = haml :mspec, :locals => {:title => "Core", :mspec => stats[:mspec_core]}, :layout => false
+  = haml :mspec, :locals => {:title => "Libraries", :mspec => stats[:mspec_libraries]}, :layout => false
+
+  %thead
+    %tr
+      %th{:colspan => 2} Source Code
+  %tbody
+    %tr
+      %th Github repository size
+      %td= "#{stats[:repo]} mb"
+      
+  %thead
+    %tr
+      %th{:colspan => 2} Binaries
+  %tbody
+    %tr
+      %th Build time
+      %td= "#{stats[:build]} s"
+    %tr
+      %th Binary size
+      %td= "#{stats[:binsize]} mb"
+
 @@ mspec
-- if mspec.empty?
-  %p No data
-- elsif mspec.select{|_,v| v.to_f != 0}.empty?
-  %p No data
-- else
-  %p
-    = mspec[:seconds]
-    %b seconds
-  %p
-    = mspec[:files]
-    %b files
-    ,
-    = mspec[:examples]
-    %b examples
-    ,
-    = mspec[:expectations]
-    %b expectations
-    ,
-    = mspec[:failures]
-    %b failures
-    ,
-    = mspec[:errors]
-    %b errors
+%thead
+  %tr.sub
+    %th{:colspan => 2} Language
+  %tbody
+    - if mspec.empty? || mspec.select{|_,v| v.to_f != 0}.empty?
+      %tr
+        %td
+          No data
+    - else
+      %tr
+        %th time
+        %td= "#{mspec[:seconds]} s"
+      %tr
+        %th files
+        %td= mspec[:files]
+      %tr 
+        %th examples
+        %td= mspec[:examples]
+      %tr
+        %th expectations
+        %td= mspec[:expectations]
+      %tr
+        %th failures
+        %td{ :class => (mspec[:failures].to_i > 0 ? 'fail' : 'pass') }
+          = mspec[:failures]
+      %tr
+        %th errors
+        %td{ :class => (mspec[:errors].to_i > 0 ? 'fail' : 'pass') }
+          = mspec[:errors]
 
 @@ stylesheet
 body
@@ -104,21 +110,34 @@ body
   :color #fff
   :font-family Consolas, "Lucida Console", Arial
   :font-size 14px
+  :text-align center
 h1
   :border-bottom 2px solid #333
-.nest
-  :margin-left 20px
-.group
-  :background-color #222
-  :padding 5px
-  :margin 0 20px
-p
-  :border-bottom 2px solid #333
-  :font-weight bold
-  :font-size 18px
-  :margin 5px
-  :padding 0
-  b
-    :font-weight normal
-    :color #ddd
-    :font-size 14px
+
+table
+  :margin-left auto
+  :margin-right auto
+  :text-align left
+  thead
+    tr
+      th
+        :font-size 18px
+        :border-bottom 2px solid #333
+        :padding 5px
+        :padding-top 30px
+      &.sub th
+        :padding 5px
+        :font-size 16px
+        :border-bottom 0
+        :background-color #222
+  tbody
+    th
+      :background-color #111
+      :text-align left
+      
+    th, td
+      :padding 5px
+.fail
+  :color red
+.pass
+  :color green
