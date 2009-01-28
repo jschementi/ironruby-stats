@@ -41,7 +41,7 @@ module Helpers
       yield 'ironruby.zip' if block_given?
     end
     
-    FileUtils.rm 'ironruby.zip'
+    puts "done"
     
     {:size => size, :filename => 'ironruby.zip'}
   end
@@ -80,20 +80,24 @@ module Stats
   end
 
   def startup_time
+    print "Timing startup ... "
     results = nil
     FileUtils.cd(BIN) do
       results = Benchmark.measure do
         `ir #{CD}/empty.rb`
       end
     end
+    puts "done"
     results
   end
   
   def throughput
+    print "Timing throughput ... "
     results = nil
     FileUtils.cd(BIN) do
       results = `ir #{CD}/loop.rb`
     end
+    puts "done"
     results.to_f
   end
   
@@ -159,6 +163,7 @@ class BaseReporter
     
     if type == :all
       reports.each {|m| run(m)}
+      final
     else
       send("report_#{type}")
     end
@@ -173,6 +178,10 @@ class BaseReporter
     end
     
     list
+  end
+  
+  def final
+    # Override this to do something at the end of the run
   end
 end
 
@@ -223,6 +232,15 @@ class DataReporter < BaseReporter
 
   def report_mspec_lib
     mspec(:lib)
+  end
+  
+  def final
+    filename = "#{CD}/data-#{Time.now.strftime("%Y%m%d%H%M%S")}.dat"
+    print "Writing #{filename} ... "
+    File.open(filename, "wb") do |f|
+      Marshal.dump(@data, f)
+    end
+    puts "done"
   end
 end
 
@@ -280,10 +298,6 @@ class TextReporter < BaseReporter
     dmr(data)
   end
   
-  def final_report
-    puts @text
-  end
-  
 private
   # Display Parsed MSpec Results 
   def dmr(results)
@@ -300,25 +314,33 @@ $default_reporter = DataReporter.new
 $behavior = {
   ['--help', '-h']     => lambda { puts usage; exit },
   ['--all']            => lambda { $default_reporter.run :all },
-  ['--clean']          => lambda { clean },
+  ['--clean']          => lambda { clean_log; clean_data },
+  ['--clean-log']      => lambda { clean_log },
+  ['--clean-data']     => lambda { clean_data },
   [/--reporter=(.*)/]  => lambda do |r|
       $default_reporter = eval(r[1].capitalize + "Reporter").new
     end,
 }.merge(
-  # generate a ['--#{name}'] => lambda { BaseReporter.run name } and
-  # generate a ['--skip-#{name} => lambda { BaseReporter.skip name }
-  # for each report in BaseReporter.reports
+  # generate a '--#{name}' and '--skip-#{name}' option for each report
   $default_reporter.reports.inject({}) do |opts, name|
-    opts[["--#{name}"]] = lambda { $default_reporter.run name.to_sym }
+    opts[["--#{name}"]]      = lambda { $default_reporter.run name.to_sym }
     opts[["--skip-#{name}"]] = lambda { $default_reporter.skip name.to_sym }
     opts
   end
 )
 
-def clean
+def clean_data
+  print 'removing data files ... '
+  Dir["#{CD}/data-*.dat"].each do |f|
+    FileUtils.rm f
+  end
+  puts 'done'
+end
+
+def clean_log
   print 'removing log files ... '
-  %W(compile.log mspec_core.log mspec_lang.log mspec_lib.log).each do |f|
-    FileUtils.rm "#{CD}/#{f}" if File.exist? "#{CD}/#{f}"
+  Dir["#{CD}/*.log"].each do |f|
+    FileUtils.rm f
   end
   puts 'done'
 end
