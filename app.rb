@@ -16,40 +16,57 @@ get '/stylesheet.css' do
   sass :stylesheet
 end
 
+use_in_file_templates!
+
 __END__
 
 @@ layout
 %html
-  =yield
-  
+  %head
+    %title IronRuby Stats
+    %link{:href => "stylesheet.css", :rel => "stylesheet", :type => "text/css"}
+  %body
+    =yield
+
 @@ index
 %h1 IronRuby Stats
 %h2 Binaries
-%p
-  %b Build time
-  = stats[:build]
-  seconds
-%p
-  %b Binary size
-  = stats[:binsize]
+.group
+  %p
+    %b Build time
+    = stats[:build]
+    seconds
+  %p
+    %b Binary size
+    = stats[:binsize]
+    MB
 %h2 Performance
-%p
-  %b Startup time
-  = stats[:startup]
-%p
-  %b Throughput (100000 iterations)
-  = stats[:throughput]
+.group
+  %p
+    %b Startup time
+    = stats[:startup]
+    seconds
+  %p
+    %b Throughput (100000 iterations)
+    = stats[:throughput]
+    seconds
 %h2 RubySpec tests
-%h3 Language
-= haml :mspec, :locals => {:mspec => stats[:mspec_lang]}, :layout => false
-%h3 Core
-= haml :mspec, :locals => {:mspec => stats[:mspec_core]}, :layout => false
-%h3 Core
-= haml :mspec, :locals => {:mspec => stats[:mspec_lib]}, :layout => false
+.nest
+  %h3 Language
+  .group
+    = haml :mspec, :locals => {:mspec => stats[:mspec_lang]}, :layout => false
+  %h3 Core
+  .group
+    = haml :mspec, :locals => {:mspec => stats[:mspec_core]}, :layout => false
+  %h3 Lib
+  .group
+    = haml :mspec, :locals => {:mspec => stats[:mspec_lib]}, :layout => false
 %h2 Source Code
-%p
-  %b GitHub repository size
-  = stats[:repo]
+.group
+  %p
+    %b GitHub repository size
+    = stats[:repo]
+    MB
 
 @@ mspec
 %p
@@ -70,3 +87,28 @@ __END__
   ,
   = mspec[:errors]
   %b errors
+
+@@ stylesheet
+body
+  :background-color #000
+  :color #fff
+  :font-family Consolas, "Lucida Console", Arial
+  :font-size 14px
+h1
+  :border-bottom 2px solid #333
+.nest
+  :margin-left 20px
+.group
+  :background-color #222
+  :padding 5px
+  :margin 0 20px
+p
+  :border-bottom 2px solid #333
+  :font-weight bold
+  :font-size 18px
+  :margin 5px
+  :padding 0
+  b
+    :font-weight normal
+    :color #ddd
+    :font-size 14px
