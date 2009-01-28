@@ -15,9 +15,28 @@ your REPO value:
 
 REPO = 'c:/dev/ironruby'
 
+== Example
+
+> ruby stats.rb --all
+
+Runs all reports, and writes results to a .dat file.
+"ruby stats.rb --reporter=data --all" will do the same thing.
+
+> ruby stats.rb --reporter=text --all
+
+Runs all reports, and outputs the results to the screen.
+
+> ruby stats.rb --mspec_lang
+
+Only run the 'mspec_lang' report
+
+> ruby stats.rb --skip-build --all
+
+Run all reports, except for 'build'
+
 == Usage
 
-ruby stats.rb [--help|-h] [--clean] [--skip-#{name}] [--#{name}|--all]
+ruby stats.rb [--help|-h] [--clean] [--reporter=(text|data)] [--skip-#{name}] [--#{name}|--all]
 
   #{name} can be any of the following:
   - mspec_core : RubySpec Core tests
