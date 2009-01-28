@@ -35,6 +35,10 @@ __END__
 
 @@ index
 %h1 IronRuby Stats
+
+%div
+  ir.exe -X:Interpret
+
 %table
   %thead
     %tr
@@ -141,3 +145,8 @@ table
   :color red
 .pass
   :color green
+div
+  :padding 5px
+  :margin-left auto
+  :margin-right auto
+  :position relative
