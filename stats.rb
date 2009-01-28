@@ -170,7 +170,8 @@ class BaseReporter
   end
 
   def reports
-    list = methods.sort.select{|m| m =~ /report_(.*)/}.map{|m| m.split("report_").last.to_sym }
+    list = methods.sort.select{|m| m =~ /report_(.*)/}.
+      map{|m| m.split("report_").last.to_sym }
     
     # push build to the first task
     if i = list.index(:build)
@@ -195,7 +196,7 @@ class DataReporter < BaseReporter
     data = super
     
     if data && type != :all
-      @data.merge!( data.kind_of?(Hash) ? data : {type.to_sym => data} )
+      @data.merge!({type.to_sym => data})
       data
     else 
       @data
