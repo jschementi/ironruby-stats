@@ -17,7 +17,14 @@ REPO = 'c:/dev/ironruby'
 
 == Usage
 
-ruby stats.rb [--help|-h] [--all] [--clean]
-  [--mspec_core] [--mspec_lang] [--mspec_lib]
-  [--build] [--binsize] [--repo] [--startup] [--throughput]
-  [--console]
+ruby stats.rb [--help|-h] [--clean] [--skip-#{name}] [--#{name}|--all]
+
+  #{name} can be any of the following:
+  - mspec_core : RubySpec Core tests
+  - mspec_lang : RubySpec Language tests 
+  - mspec_lib  : RubySpec Library tests
+  - build      : Builds IronRuby
+  - binsize    : Size of IronRuby binaries
+  - repo       : Size of IronRuby source code repository
+  - startup    : Time to start ir.exe
+  - throughput : Time to do 100,000 iterations of (i *= 2)
