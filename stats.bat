@@ -1,0 +1,1 @@
+ruby stats.rb --all

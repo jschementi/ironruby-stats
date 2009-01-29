@@ -68,7 +68,7 @@ module Stats
   include Helpers
   
   def build
-    print "Building IronRUby ... "
+    print "Building IronRuby ... "
     result = Benchmark.measure do
       FileUtils.cd(RB) { system "rake compile > #{DATA}/compile.log 2>&1" }
     end
@@ -327,10 +327,14 @@ $behavior = {
 )
 
 def clean
+  remove_all = lambda{ |path| Dir[path].each{ |f| FileUtils.rm f } }
+
   print 'removing log files ... '
-  Dir["#{DATA}/*.log"].each do |f|
-    FileUtils.rm f
-  end
+  remove_all.call "#{DATA}/*.log"
+  puts 'done'
+
+  print 'removing zip files ... '
+  remove_all.call "#{DATA}/*.zip"
   puts 'done'
 end
 
