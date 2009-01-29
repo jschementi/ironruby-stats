@@ -112,7 +112,7 @@ module Stats
     unless File.exist? "#{DATA}/mspec_#{type}.log"
       results = nil
       FileUtils.cd(RB) do
-        system "#{MSPEC} #{type} -T'#{IR_OPTIONS}' > #{CD}/mspec_#{type}.log 2>&1"
+        system "#{MSPEC} #{type} -T'#{IR_OPTIONS}' > #{DATA}/mspec_#{type}.log 2>&1"
       end
     end
     puts "done"
@@ -229,7 +229,7 @@ class DataReporter < BaseReporter
     mspec(:language)
   end
 
-  def report_mspec_libraries
+  def report_mspec_library
     mspec(:libraries)
   end
   
@@ -293,7 +293,7 @@ class TextReporter < BaseReporter
     dmr(data)
   end
   
-  def report_mspec_libraries
+  def report_mspec_library
     dmr(data)
   end
   
@@ -313,9 +313,7 @@ $default_reporter = DataReporter.new
 $behavior = {
   ['--help', '-h']     => lambda { puts usage; exit },
   ['--all']            => lambda { $default_reporter.run :all },
-  ['--clean']          => lambda { clean_log; clean_data },
-  ['--clean-log']      => lambda { clean_log },
-  ['--clean-data']     => lambda { clean_data },
+  ['--clean']          => lambda { clean },
   [/--reporter=(.*)/]  => lambda do |r|
       $default_reporter = eval(r[1].capitalize + "Reporter").new
     end,
@@ -328,15 +326,7 @@ $behavior = {
   end
 )
 
-def clean_data
-  print 'removing data files ... '
-  Dir["#{DATA}/data-*.dat"].each do |f|
-    FileUtils.rm f
-  end
-  puts 'done'
-end
-
-def clean_log
+def clean
   print 'removing log files ... '
   Dir["#{DATA}/*.log"].each do |f|
     FileUtils.rm f
