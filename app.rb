@@ -7,6 +7,20 @@ def dbg
   debugger
 end
 
+helpers do
+  def time(t)
+    t ? "#{t} s" : "No data"
+  end
+  
+  def size(s)
+    s ? "#{s} mb" : "No data"
+  end
+  
+  def data(d)
+    d ? d.to_s : "No data"
+  end
+end
+
 get '/' do
   stats = nil
   File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
@@ -46,17 +60,17 @@ __END__
   %tbody
     %tr
       %th Startup time
-      %td= "#{stats[:startup]} s"
+      %td= time stats[:startup]
     %tr
       %th Throughput (100000 iters)
-      %td= "#{stats[:throughput]} s"
+      %td= time stats[:throughput]
 
   %thead
     %tr
       %th{:colspan => 2} RubySpec
   = haml :mspec, :locals => {:title => "Language", :mspec => stats[:mspec_language]}, :layout => false
   = haml :mspec, :locals => {:title => "Core", :mspec => stats[:mspec_core]}, :layout => false
-  = haml :mspec, :locals => {:title => "Libraries", :mspec => stats[:mspec_libraries]}, :layout => false
+  = haml :mspec, :locals => {:title => "Library", :mspec => stats[:mspec_library]}, :layout => false
 
   %thead
     %tr
@@ -64,7 +78,7 @@ __END__
   %tbody
     %tr
       %th Github repository size
-      %td= "#{stats[:repo]} mb"
+      %td= size stats[:repo]
       
   %thead
     %tr
@@ -72,10 +86,10 @@ __END__
   %tbody
     %tr
       %th Build time
-      %td= "#{stats[:build]} s"
+      %td= time stats[:build]
     %tr
       %th Binary size
-      %td= "#{stats[:binsize]} mb"
+      %td= size stats[:binsize]
 
 @@ mspec
 %thead
@@ -89,24 +103,24 @@ __END__
     - else
       %tr
         %th time
-        %td= "#{mspec[:seconds]} s"
+        %td= time mspec[:seconds]
       %tr
         %th files
-        %td= mspec[:files]
+        %td= data mspec[:files]
       %tr 
         %th examples
-        %td= mspec[:examples]
+        %td= data mspec[:examples]
       %tr
         %th expectations
-        %td= mspec[:expectations]
+        %td= data mspec[:expectations]
       %tr
         %th failures
         %td{ :class => (mspec[:failures].to_i > 0 ? 'fail' : 'pass') }
-          = mspec[:failures]
+          = data mspec[:failures]
       %tr
         %th errors
         %td{ :class => (mspec[:errors].to_i > 0 ? 'fail' : 'pass') }
-          = mspec[:errors]
+          = data mspec[:errors]
 
 @@ stylesheet
 body
