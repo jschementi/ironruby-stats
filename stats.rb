@@ -80,25 +80,29 @@ module Stats
   end
 
   def startup_time
-    print "Timing startup (compiled and interpreted) ... "
-    c = nil
-    c = Benchmark.measure do
-      `#{IR} #{CD}/empty.rb`
-    end
-    i = nil
-    i = Benchmark.measure do
-      `#{IR} #{INTERPRET} #{CD}/empty.rb`
+    print "Timing average startup (compiled and interpreted) ... "
+    c = i = 0
+    10.times do
+      c += Benchmark.measure do
+        `#{IR} #{CD}/empty.rb`
+      end.real
+      i += Benchmark.measure do
+        `#{IR} #{INTERPRET} #{CD}/empty.rb`
+      end.real
     end
     puts "done"
-    {:compiled => c.real, :interpreted => i.real}
+    {:compiled => c / 10.0, :interpreted => i / 10.0}
   end
   
   def throughput
-    print "Timing throughput (compiled and interpreted) ... "
-    i = `#{IR} #{INTERPRET} #{CD}/loop.rb`
-    c = `#{IR} #{CD}/loop.rb`
+    print "Timing average throughput (compiled and interpreted) ... "
+    c = i = 0
+    10.times do
+      i += `#{IR} #{INTERPRET} #{CD}/loop.rb`.to_f
+      c += `#{IR} #{CD}/loop.rb`.to_f
+    end
     puts "done"
-    {:compiled => c.to_f, :interpreted => i.to_f}
+    {:compiled => c / 10.0, :interpreted => i / 10.0}
   end
   
   def mspec(type = nil)
