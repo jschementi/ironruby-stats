@@ -110,16 +110,18 @@ module Stats
     
     # since running mspec takes a while, only run if the log file is not present
     print "Running mspec:#{type} with #{impl || 'ironruby'} ... "
-    unless File.exist? "#{DATA}/mspec_#{type}.log"
+
+    log = "#{DATA}/mspec_#{type}#{"_#{impl}" if impl}.log"
+    unless File.exist? log
       results = nil
       FileUtils.cd(RB) do
         # To run interpreter: -T'#{INTERPRET}'
-        system "#{MSPEC} #{"--target #{impl}" if impl} #{type} > #{DATA}/mspec_#{type}#{"_#{impl}" if impl}.log 2>&1"
+        system "#{MSPEC} #{"--target #{impl}" if impl} #{type} > #{log} 2>&1"
       end
     end
     puts "done"
      
-    pmr File.open("#{DATA}/mspec_#{type}.log", "r") { |f| f.read }
+    pmr File.open(log, "r") { |f| f.read }
   end
 
   # Parse MSpec Results 
