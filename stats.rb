@@ -6,7 +6,8 @@ CD = File.expand_path(File.dirname(__FILE__))
 DATA = "#{CD}/data"
 INTERPRET = "-X:Interpret"
 IR = "#{BIN}/ir.exe"
-MSPEC = "mspec.bat run -fs -Gcritical"
+MSPEC = "mspec.bat run -fs"
+MSPEC_OPTIONS = "-Gcritical"
 
 require 'fileutils'
 require 'mymath'
@@ -114,15 +115,16 @@ module Stats
   def mspec(type = nil, impl = nil)
     type ||= :core
     
-    # since running mspec takes a while, only run if the log file is not present
     print "Running mspec:#{type} with #{impl || 'ironruby'} ... "
 
     log = "#{DATA}/mspec_#{type}#{"_#{impl}" if impl}.log"
+    
+    # since running mspec takes a while, only run if the log file is not present
     unless File.exist? log
       results = nil
       FileUtils.cd(RB) do
         # To run interpreter: -T'#{INTERPRET}'
-        system "#{MSPEC} #{"--target #{impl}" if impl} #{type} > #{log} 2>&1"
+        system "#{MSPEC} #{MSPEC_OPTIONS if impl != :ruby} #{"--target #{impl}" if impl} #{type} > #{log} 2>&1"
       end
     end
     puts "done"
