@@ -75,7 +75,7 @@ __END__
 %table
   %thead
     %tr
-      %th{:colspan => 3}
+      %th{:colspan => 4}
         Performance
     %tr.sub
       %th
@@ -96,10 +96,10 @@ __END__
 
   %thead
     %tr
-      %th{:colspan => 3} RubySpec
-    %tr
-      %th implementation
-      %th ir.exe
+      %th{:colspan => 4} RubySpec
+    %tr.sub
+      %th{:colspan => 1}
+      %th{:colspan => 2, :style => 'text-align: right'} ir.exe
       %th ruby.exe
   = haml :mspec, :locals => {:title => "Language", :mspec => stats[:mspec_language]}, :layout => false
   = haml :mspec, :locals => {:title => "Core", :mspec => stats[:mspec_core]}, :layout => false
@@ -107,29 +107,29 @@ __END__
 
   %thead
     %tr
-      %th{:colspan => 3} Source Code
+      %th{:colspan => 4} Source Code
   %tbody
     %tr
       %th Github repository size
-      %td{:colspan => 2}= size stats[:repo]
+      %td{:colspan => 4}= size stats[:repo]
       
   %thead
     %tr
-      %th{:colspan => 3} Binaries
+      %th{:colspan => 4} Binaries
   %tbody
     %tr
       %th Build time
-      %td{:colspan => 2}= time stats[:build]
+      %td{:colspan => 3}= time stats[:build]
     %tr
       %th Binary size
-      %td{:colspan => 2}= size(total_binary_size(stats[:binsize]))
+      %td{:colspan => 3}= size(total_binary_size(stats[:binsize]))
 
 @@ mspec
 %thead
   %tr.sub
-    %th{:colspan => 3}= title
+    %th{:colspan => 4}= title
   %tbody
-    - if mspec.nil? || mspec.empty? || mspec.select{|_,v| v.to_f != 0}.empty?
+    - if mspec.nil? || mspec.empty?
       %tr
         %td
           No data
@@ -137,30 +137,30 @@ __END__
       %tr
         %th time
         %td{:colspan => 2}= time mspec[:ironruby][:seconds]
-        %td{:colspan => 2}= time mspec[:ruby][:seconds]
+        %td{:colspan => 1}= time mspec[:ruby][:seconds]
       %tr
         %th files
         %td{:colspan => 2}= data mspec[:ironruby][:files]
-        %td{:colspan => 2}= data mspec[:ruby][:files]
+        %td{:colspan => 1}= data mspec[:ruby][:files]
       %tr 
         %th examples
         %td{:colspan => 2}= data mspec[:ironruby][:examples]
-        %td{:colspan => 2}= data mspec[:ruby][:examples]
+        %td{:colspan => 1}= data mspec[:ruby][:examples]
       %tr
         %th expectations
         %td{:colspan => 2}= data mspec[:ironruby][:expectations]
-        %td{:colspan => 2}= data mspec[:ruby][:expectations]
+        %td{:colspan => 1}= data mspec[:ruby][:expectations]
       %tr
         %th failures
         %td{:colspan => 2, :class => (mspec[:ironruby][:failures].to_i > 0 ? 'fail' : 'pass') }
           = data mspec[:ironruby][:failures]
-        %td{:colspan => 2, :class => (mspec[:ruby][:failures].to_i > 0 ? 'fail' : 'pass') }
+        %td{:colspan => 1, :class => (mspec[:ruby][:failures].to_i > 0 ? 'fail' : 'pass') }
           = data mspec[:ruby][:failures]
       %tr
         %th errors
         %td{:colspan => 2, :class => (mspec[:ironruby][:errors].to_i > 0 ? 'fail' : 'pass') }
           = data mspec[:ironruby][:errors]
-        %td{:colspan => 2, :class => (mspec[:ruby][:errors].to_i > 0 ? 'fail' : 'pass') }
+        %td{:colspan => 1, :class => (mspec[:ruby][:errors].to_i > 0 ? 'fail' : 'pass') }
           = data mspec[:ruby][:errors]
 
 @@ stylesheet
