@@ -80,7 +80,7 @@ __END__
 @@ mspec
 %thead
   %tr.sub
-    %th{:colspan => 2} Language
+    %th{:colspan => 2}= title
   %tbody
     - if mspec.empty? || mspec.select{|_,v| v.to_f != 0}.empty?
       %tr
