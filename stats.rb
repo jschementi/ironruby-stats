@@ -4,8 +4,8 @@ RB = "#{REPO}/Merlin/Main/Languages/Ruby"
 BIN = "#{REPO}/Merlin/Main/Bin/debug"
 CD = File.expand_path(File.dirname(__FILE__))
 DATA = "#{CD}/data"
-IR_OPTIONS = "-X:Interpret"
-IR = "#{BIN}/ir.exe #{IR_OPTIONS}"
+INTERPRET = "-X:Interpret"
+IR = "#{BIN}/ir.exe"
 MSPEC = "mspec.bat run -fs -Gcritical"
 
 require 'fileutils'
@@ -50,14 +50,6 @@ module Helpers
     
     {:size => size, :filename => filename}
   end
-
-  def total_binary_size(binaries)
-    binaries.inject(0){|x,(_,y)| x += y }
-  end
-
-  def mb(bytes)
-    bytes./(1_000_000.0).round_to(2)
-  end
 end
 
 #
@@ -73,7 +65,7 @@ module Stats
       FileUtils.cd(RB) { system "rake compile > #{DATA}/compile.log 2>&1" }
     end
     puts "done"
-    result
+    result.real
   end
 
   def size_of_binaries
@@ -88,20 +80,25 @@ module Stats
   end
 
   def startup_time
-    print "Timing startup ... "
-    results = nil
-    results = Benchmark.measure do
+    print "Timing startup (compiled and interpreted) ... "
+    c = nil
+    c = Benchmark.measure do
       `#{IR} #{CD}/empty.rb`
     end
+    i = nil
+    i = Benchmark.measure do
+      `#{IR} #{INTERPRET} #{CD}/empty.rb`
+    end
     puts "done"
-    results
+    {:compiled => c.real, :interpreted => i.real}
   end
   
   def throughput
-    print "Timing throughput ... "
-    results = `#{IR} #{CD}/loop.rb`
+    print "Timing throughput (compiled and interpreted) ... "
+    i = `#{IR} #{INTERPRET} #{CD}/loop.rb`
+    c = `#{IR} #{CD}/loop.rb`
     puts "done"
-    results.to_f
+    {:compiled => c.to_f, :interpreted => i.to_f}
   end
   
   def mspec(type = nil)
@@ -112,7 +109,8 @@ module Stats
     unless File.exist? "#{DATA}/mspec_#{type}.log"
       results = nil
       FileUtils.cd(RB) do
-        system "#{MSPEC} #{type} -T'#{IR_OPTIONS}' > #{DATA}/mspec_#{type}.log 2>&1"
+        # To run interpreter: -T'#{INTERPRET}'
+        system "#{MSPEC} #{type} > #{DATA}/mspec_#{type}.log 2>&1"
       end
     end
     puts "done"
@@ -202,23 +200,23 @@ class DataReporter < BaseReporter
   end
 
   def report_build
-    build.real.round_to(2)
+    build
   end
 
   def report_binsize
-    mb(total_binary_size(size_of_binaries))
+    size_of_binaries
   end
 
   def report_repo
-    mb(github_size)
+    github_size
   end
 
   def report_startup
-    startup_time.real.round_to(2)
+    startup_time
   end
 
   def report_throughput
-    throughput.round_to(2)
+    throughput
   end
 
   def report_mspec_language
@@ -270,19 +268,19 @@ class TextReporter < BaseReporter
   end
   
   def report_binsize
-    "Binary size: #{data}MB\n"
+    "Binary size: #{mb(total_binary_size(data))} MB\n"
   end
   
   def report_repo
-    "Github repo size: #{data} MB\n"
+    "Github repo size: #{mb(data)} MB\n"
   end
   
   def report_startup
-    "Startup time: #{data} seconds\n"
+    "Startup time: compiled(#{data[:compiled]} s), interpreted(#{data[:interpreted]} s)\n"
   end
 
   def report_throughput
-    "Throughput: (100000 iterations) #{data} seconds\n"
+    "Throughput: (100000 iterations): compiled(#{data[:compiled]} s), interpreted(#{data[:interpreted]} s)\n"
   end
   
   def report_mspec_language
@@ -298,9 +296,17 @@ class TextReporter < BaseReporter
   end
   
 private
-  # Display Parsed MSpec Results 
+  # display parsed rubyspec results 
   def dmr(results)
     results.inject(""){ |s,(k,v)| s << "#{k}:\t#{v}\n"; s }
+  end
+  
+  def total_binary_size(binaries)
+    binaries.inject(0){|x,(_,y)| x += y }
+  end
+
+  def mb(bytes)
+    bytes./(1_000_000.0).round_to(2)
   end
 end
 
@@ -363,7 +369,7 @@ ARGV.each do |arg|
   
   unless found
     puts "Unknown argument '#{arg}'"
-    puts help
+    puts usage
     exit
   end
 end
