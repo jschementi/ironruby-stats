@@ -78,18 +78,21 @@ __END__
       %th{:colspan => 3}
         Performance
     %tr.sub
+      %th
       %th ir.exe
-      %th default
       %th -X:Interpret
+      %th ruby.exe
   %tbody
     %tr
       %th Startup time
       %td= time(stats[:startup][:compiled])
       %td= time(stats[:startup][:interpreted])
+      %td= time(stats[:startup][:ruby])
     %tr
       %th 100000 iters
       %td= time(stats[:throughput][:compiled])
       %td= time(stats[:throughput][:interpreted])
+      %td= time(stats[:throughput][:ruby])
 
   %thead
     %tr
@@ -126,7 +129,7 @@ __END__
   %tr.sub
     %th{:colspan => 3}= title
   %tbody
-    - if mspec.empty? || mspec.select{|_,v| v.to_f != 0}.empty?
+    - if mspec.nil? || mspec.empty? || mspec.select{|_,v| v.to_f != 0}.empty?
       %tr
         %td
           No data

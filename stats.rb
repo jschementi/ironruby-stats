@@ -80,29 +80,35 @@ module Stats
   end
 
   def startup_time
-    print "Timing average startup (compiled and interpreted) ... "
-    c = i = 0
-    10.times do
+    print "Timing average startup (compiled, interpreted, and MRI) ... "
+    c = i = r = 0
+    iters = 10.0
+    iters.to_i.times do
       c += Benchmark.measure do
         `#{IR} #{CD}/empty.rb`
       end.real
       i += Benchmark.measure do
         `#{IR} #{INTERPRET} #{CD}/empty.rb`
       end.real
+      r += Benchmark.measure do
+        `ruby #{CD}/empty.rb`
+      end.real
     end
     puts "done"
-    {:compiled => c / 10.0, :interpreted => i / 10.0}
+    {:compiled => c / iters, :interpreted => i / iters, :ruby => r / iters}
   end
   
   def throughput
-    print "Timing average throughput (compiled and interpreted) ... "
-    c = i = 0
-    10.times do
+    print "Timing average throughput (compiled, interpreted, and MRI) ... "
+    c = i = r = 0
+    iters = 10.0
+    iters.to_i.times do
       i += `#{IR} #{INTERPRET} #{CD}/loop.rb`.to_f
       c += `#{IR} #{CD}/loop.rb`.to_f
+      r += `ruby #{CD}/loop.rb`.to_f
     end
     puts "done"
-    {:compiled => c / 10.0, :interpreted => i / 10.0}
+    {:compiled => c / iters, :interpreted => i / iters, :ruby => r / iters}
   end
   
   def mspec(type = nil, impl = nil)
@@ -282,11 +288,11 @@ class TextReporter < BaseReporter
   end
   
   def report_startup
-    "Startup time: compiled(#{data[:compiled]} s), interpreted(#{data[:interpreted]} s)\n"
+    "Startup time: #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
   end
 
   def report_throughput
-    "Throughput: (100000 iterations): compiled(#{data[:compiled]} s), interpreted(#{data[:interpreted]} s)\n"
+    "Throughput: (100000 iterations): #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
   end
   
   def report_mspec_language
