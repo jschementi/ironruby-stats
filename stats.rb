@@ -109,7 +109,7 @@ module Stats
     type ||= :core
     
     # since running mspec takes a while, only run if the log file is not present
-    print "Running mspec:#{type} ... "
+    print "Running mspec:#{type} with #{impl || 'ironruby'} ... "
     unless File.exist? "#{DATA}/mspec_#{type}.log"
       results = nil
       FileUtils.cd(RB) do
