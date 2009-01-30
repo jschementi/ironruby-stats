@@ -363,7 +363,7 @@ ARGV.each do |arg|
   
   unless found
     puts "Unknown argument '#{arg}'"
-    puts help
+    puts usage
     exit
   end
 end
