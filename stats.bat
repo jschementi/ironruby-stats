@@ -1,1 +1,1 @@
-ruby stats.rb --all
+ruby stats.rb --skip-build --all

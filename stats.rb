@@ -221,16 +221,16 @@ class DataReporter < BaseReporter
     throughput.round_to(2)
   end
 
-  def report_mspec_core
-    mspec(:core)
-  end
-
   def report_mspec_language
     mspec(:language)
   end
 
+  def report_mspec_core
+    mspec(:core)
+  end
+
   def report_mspec_library
-    mspec(:libraries)
+    mspec(:library)
   end
   
   def final
@@ -284,12 +284,12 @@ class TextReporter < BaseReporter
   def report_throughput
     "Throughput: (100000 iterations) #{data} seconds\n"
   end
-
-  def report_mspec_core
+  
+  def report_mspec_language
     dmr(data)
   end
   
-  def report_mspec_language
+  def report_mspec_core
     dmr(data)
   end
   
@@ -300,7 +300,7 @@ class TextReporter < BaseReporter
 private
   # Display Parsed MSpec Results 
   def dmr(results)
-    results.inject("") { |s,(k,v)| s << "#{k}:\t#{v}\n"; s }
+    results.inject(""){ |s,(k,v)| s << "#{k}:\t#{v}\n"; s }
   end
 end
 
