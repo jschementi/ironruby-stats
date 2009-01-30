@@ -105,7 +105,7 @@ module Stats
     {:compiled => c / 10.0, :interpreted => i / 10.0}
   end
   
-  def mspec(type = nil)
+  def mspec(type = nil, impl = nil)
     type ||= :core
     
     # since running mspec takes a while, only run if the log file is not present
@@ -114,7 +114,7 @@ module Stats
       results = nil
       FileUtils.cd(RB) do
         # To run interpreter: -T'#{INTERPRET}'
-        system "#{MSPEC} #{type} > #{DATA}/mspec_#{type}.log 2>&1"
+        system "#{MSPEC} #{"--target #{impl}" if impl} #{type} > #{DATA}/mspec_#{type}#{"_#{impl}" if impl}.log 2>&1"
       end
     end
     puts "done"
@@ -224,15 +224,15 @@ class DataReporter < BaseReporter
   end
 
   def report_mspec_language
-    mspec(:language)
+    {:ironruby => mspec(:language), :ruby => mspec(:language, :ruby)}
   end
 
   def report_mspec_core
-    mspec(:core)
+    {:ironruby => mspec(:core), :ruby => mspec(:core, :ruby)}
   end
 
   def report_mspec_library
-    mspec(:library)
+    {:ironruby => mspec(:library), :ruby => mspec(:library, :ruby)}
   end
   
   def final
@@ -288,15 +288,15 @@ class TextReporter < BaseReporter
   end
   
   def report_mspec_language
-    dmr(data)
+    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
   end
   
   def report_mspec_core
-    dmr(data)
+    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
   end
   
   def report_mspec_library
-    dmr(data)
+    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
   end
   
 private

@@ -13,8 +13,8 @@ end
 
 helpers do
   def time(t)
-    if t
-      t = t.to_f
+    t = t.to_f
+    if t > 0
       t < 60 ? "#{t.round_to(2)} s" : "#{(t / 60).round_to(2)} m"
     else
       "No data"
@@ -94,6 +94,10 @@ __END__
   %thead
     %tr
       %th{:colspan => 3} RubySpec
+    %tr
+      %th implementation
+      %th ir.exe
+      %th ruby.exe
   = haml :mspec, :locals => {:title => "Language", :mspec => stats[:mspec_language]}, :layout => false
   = haml :mspec, :locals => {:title => "Core", :mspec => stats[:mspec_core]}, :layout => false
   = haml :mspec, :locals => {:title => "Library", :mspec => stats[:mspec_library]}, :layout => false
@@ -129,24 +133,32 @@ __END__
     - else
       %tr
         %th time
-        %td{:colspan => 2}= time mspec[:seconds]
+        %td{:colspan => 2}= time mspec[:ironruby][:seconds]
+        %td{:colspan => 2}= time mspec[:ruby][:seconds]
       %tr
         %th files
-        %td{:colspan => 2}= data mspec[:files]
+        %td{:colspan => 2}= data mspec[:ironruby][:files]
+        %td{:colspan => 2}= data mspec[:ruby][:files]
       %tr 
         %th examples
-        %td{:colspan => 2}= data mspec[:examples]
+        %td{:colspan => 2}= data mspec[:ironruby][:examples]
+        %td{:colspan => 2}= data mspec[:ruby][:examples]
       %tr
         %th expectations
-        %td{:colspan => 2}= data mspec[:expectations]
+        %td{:colspan => 2}= data mspec[:ironruby][:expectations]
+        %td{:colspan => 2}= data mspec[:ruby][:expectations]
       %tr
         %th failures
-        %td{:colspan => 2, :class => (mspec[:failures].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:failures]
+        %td{:colspan => 2, :class => (mspec[:ironruby][:failures].to_i > 0 ? 'fail' : 'pass') }
+          = data mspec[:ironruby][:failures]
+        %td{:colspan => 2, :class => (mspec[:ruby][:failures].to_i > 0 ? 'fail' : 'pass') }
+          = data mspec[:ruby][:failures]
       %tr
         %th errors
-        %td{:colspan => 2, :class => (mspec[:errors].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:errors]
+        %td{:colspan => 2, :class => (mspec[:ironruby][:errors].to_i > 0 ? 'fail' : 'pass') }
+          = data mspec[:ironruby][:errors]
+        %td{:colspan => 2, :class => (mspec[:ruby][:errors].to_i > 0 ? 'fail' : 'pass') }
+          = data mspec[:ruby][:errors]
 
 @@ stylesheet
 body
