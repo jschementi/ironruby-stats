@@ -14,8 +14,8 @@ end
 helpers do
   def time(t)
     t = t.to_f
-    if t > 0
-      t < 60 ? "#{t.round_to(2)} s" : "#{(t / 60).round_to(2)} m"
+    if t != 0
+      (t < 60 && t > -60) ? "#{t.round_to(2)} s" : "#{(t / 60).round_to(2)} m"
     else
       "No data"
     end
@@ -27,6 +27,24 @@ helpers do
   
   def data(d)
     d ? d.to_s : "No data"
+  end
+  
+  def magnitude(*d)
+    green_or_red(times(d), "x")
+  end
+  
+  def times(data)
+    one, two = data[0], data[1]
+    (one/two > 0 ? -1 * (one/two) : two/one).round_to(2)
+  end
+  
+  def green_or_red(data, append = "")
+    color = if data >= 0 then 'green' elsif data < 0 then 'red' end
+    "<span style='color: #{color}'>#{data}#{append}</span>"
+  end
+  
+  def total_pass_rate(comp, ref)
+    ((comp[:expectations] -comp[:failures] - comp[:errors]).to_f / ref[:expectations]).round_to(2)
   end
   
   def total_binary_size(binaries)
@@ -64,6 +82,7 @@ __END__
   %body
     =yield
 
+
 @@ index
 %h1 IronRuby Stats
 
@@ -75,59 +94,58 @@ __END__
 %table
   %thead
     %tr
-      %th{:colspan => 4}
+      %th{:colspan => 5}
         Performance
-    %tr.sub
+    %tr.sub.right
       %th
       %th ir.exe
       %th -X:Interpret
       %th ruby.exe
+      %th diff
   %tbody
-    %tr
-      %th Startup time
-      %td= time(stats[:startup][:compiled])
-      %td= time(stats[:startup][:interpreted])
-      %td= time(stats[:startup][:ruby])
-    %tr
-      %th 100000 iters
-      %td= time(stats[:throughput][:compiled])
-      %td= time(stats[:throughput][:interpreted])
-      %td= time(stats[:throughput][:ruby])
-
+    = haml :benchmark,:locals => {:b => stats[:startup],:title => "Startup time",:to_diff => :interpreted}
+    = haml :benchmark,:locals => {:b => stats[:throughput],:title => "100,000 iterations",:to_diff => :compiled}
   %thead
     %tr
-      %th{:colspan => 4} RubySpec
-    %tr.sub
+      %th{:colspan => 5} RubySpec
+    %tr.sub.right
       %th{:colspan => 1}
-      %th{:colspan => 2, :style => 'text-align: right'} ir.exe
+      %th{:colspan => 2} ir.exe
       %th ruby.exe
-  = haml :mspec, :locals => {:title => "Language", :mspec => stats[:mspec_language]}, :layout => false
-  = haml :mspec, :locals => {:title => "Core", :mspec => stats[:mspec_core]}, :layout => false
-  = haml :mspec, :locals => {:title => "Library", :mspec => stats[:mspec_library]}, :layout => false
+      %th diff
+  
+  = haml :mspec,:locals => {:title => "Language",:mspec => stats[:mspec_language]},:layout => false
+  = haml :mspec,:locals => {:title => "Core",:mspec => stats[:mspec_core]},:layout => false
+  = haml :mspec,:locals => {:title => "Library",:mspec => stats[:mspec_library]},:layout => false
 
   %thead
     %tr
-      %th{:colspan => 4} Source Code
-  %tbody
-    %tr
-      %th Github repository size
-      %td{:colspan => 4}= size stats[:repo]
-      
-  %thead
-    %tr
-      %th{:colspan => 4} Binaries
+      %th{:colspan => 5} Fun facts
   %tbody
     %tr
       %th Build time
-      %td{:colspan => 3}= time stats[:build]
+      %td{:colspan => 4}= time stats[:build]
     %tr
       %th Binary size
-      %td{:colspan => 3}= size(total_binary_size(stats[:binsize]))
+      %td{:colspan => 4}= size(total_binary_size(stats[:binsize]))
+    %tr
+      %th Github repository size
+      %td{:colspan => 4}= size stats[:repo]
+
+
+@@ benchmark
+%tr
+  %th= title
+  %td= time(b[:compiled])
+  %td= time(b[:interpreted])
+  %td= time(b[:ruby])
+  %td= magnitude(b[to_diff], b[:ruby])
+
 
 @@ mspec
 %thead
   %tr.sub
-    %th{:colspan => 4}= title
+    %th{:colspan => 5}= title
   %tbody
     - if mspec.nil? || mspec.empty?
       %tr
@@ -138,30 +156,38 @@ __END__
         %th time
         %td{:colspan => 2}= time mspec[:ironruby][:seconds]
         %td{:colspan => 1}= time mspec[:ruby][:seconds]
+        %td= magnitude mspec[:ironruby][:seconds], mspec[:ruby][:seconds]
       %tr
         %th files
         %td{:colspan => 2}= data mspec[:ironruby][:files]
         %td{:colspan => 1}= data mspec[:ruby][:files]
+        %td= green_or_red -1 * mspec[:delta][:files]
       %tr 
         %th examples
         %td{:colspan => 2}= data mspec[:ironruby][:examples]
         %td{:colspan => 1}= data mspec[:ruby][:examples]
+        %td= green_or_red -1 * mspec[:delta][:examples]
       %tr
         %th expectations
         %td{:colspan => 2}= data mspec[:ironruby][:expectations]
         %td{:colspan => 1}= data mspec[:ruby][:expectations]
+        %td= green_or_red -1 * mspec[:delta][:expectations]
       %tr
         %th failures
-        %td{:colspan => 2, :class => (mspec[:ironruby][:failures].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:ironruby][:failures]
-        %td{:colspan => 1, :class => (mspec[:ruby][:failures].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:ruby][:failures]
+        %td{:colspan => 2}= mspec[:ironruby][:failures]
+        %td= mspec[:ruby][:failures]
+        %td= green_or_red mspec[:delta][:failures]
       %tr
         %th errors
-        %td{:colspan => 2, :class => (mspec[:ironruby][:errors].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:ironruby][:errors]
-        %td{:colspan => 1, :class => (mspec[:ruby][:errors].to_i > 0 ? 'fail' : 'pass') }
-          = data mspec[:ruby][:errors]
+        %td{:colspan => 2}= mspec[:ironruby][:errors]
+        %td= mspec[:ruby][:errors]
+        %td= green_or_red mspec[:delta][:errors]
+      %tr
+        %th total pass rate
+        %td{:colspan => 2}= "#{tir = total_pass_rate(mspec[:ironruby], mspec[:ruby]) * 100}%"
+        %td= "#{trb = total_pass_rate(mspec[:ruby], mspec[:ruby]) * 100}%"
+        %td= green_or_red(tir - trb, "%")
+
 
 @@ stylesheet
 body
@@ -188,6 +214,8 @@ table
         :font-size 16px
         :border-bottom 0
         :background-color #222
+      &.right th
+        :text-align right
   tbody
     th
       :background-color #111

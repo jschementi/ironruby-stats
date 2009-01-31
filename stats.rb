@@ -13,6 +13,13 @@ require 'fileutils'
 require 'mymath'
 require 'benchmark'
 
+def dbg
+  require 'rubygems'
+  require 'ruby-debug'
+  Debugger.start
+  debugger
+end
+
 #
 # Helpers
 #
@@ -95,8 +102,10 @@ module Stats
         `ruby #{CD}/empty.rb`
       end.real
     end
+    c, i, r = [c,i,r].map{|i| i / iters}
+    delta = r - (c < i ? c : i)
     puts "done"
-    {:compiled => c / iters, :interpreted => i / iters, :ruby => r / iters}
+    {:compiled => c, :interpreted => i, :ruby => r, :delta => delta}
   end
   
   def throughput
@@ -108,8 +117,10 @@ module Stats
       c += `#{IR} #{CD}/loop.rb`.to_f
       r += `ruby #{CD}/loop.rb`.to_f
     end
+    c, i, r = [c,i,r].map{|i| i / iters}
+    delta = r - (c < i ? c : i)
     puts "done"
-    {:compiled => c / iters, :interpreted => i / iters, :ruby => r / iters}
+    {:compiled => c, :interpreted => i, :ruby => r, :delta => delta}
   end
   
   def mspec(type = nil, impl = nil)
@@ -137,14 +148,16 @@ module Stats
     data = {}
     parser = /Finished in (.*? second)[s]?\n\n(.*? file)[s]?, (.*? example)[s]?, (.*? expectation)[s]?, (.*? failure)[s]?, (.*? error)[s]?/
     
-    #cnvrsns = {:seconds => lambda {|i| i.to_f}}
+    cnvrsns = {:seconds => lambda {|i| i.to_f}}
+    default = lambda{|i| i.to_i}
     
     results.scan(parser) do |parsed|
       parsed.each do |node|
         s = node.split(' ')
-        data["#{s.last}s".to_sym] = s.first
-        
-        #cnvrsns.each{|f,l| data[f] = l.call(data[f]) if data.has_key?(f)}
+        key = "#{s.last}s".to_sym
+        cnvrsns.each do |f,l| 
+          data[key] = (key == f ? l : default).call(s.first)
+        end
       end
     end
     
@@ -234,15 +247,15 @@ class DataReporter < BaseReporter
   end
 
   def report_mspec_language
-    {:ironruby => mspec(:language), :ruby => mspec(:language, :ruby)}
+    _mspec(:language)
   end
 
   def report_mspec_core
-    {:ironruby => mspec(:core), :ruby => mspec(:core, :ruby)}
+    _mspec(:core)
   end
 
   def report_mspec_library
-    {:ironruby => mspec(:library), :ruby => mspec(:library, :ruby)}
+    _mspec(:library)
   end
   
   def final
@@ -252,6 +265,14 @@ class DataReporter < BaseReporter
       Marshal.dump(@data, f)
     end
     puts "done"
+  end
+  
+private
+  def _mspec(scope)
+    ir = mspec(scope)
+    ru = mspec(scope, :ruby)
+    delta = ir.inject({}){|r,(k,v)| r[k] = ru[k] - ir[k]; r}
+    {:ironruby => ir, :ruby => ru, :delta => delta}
   end
 end
 
@@ -298,18 +319,22 @@ class TextReporter < BaseReporter
   end
   
   def report_mspec_language
-    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
+    _mspec
   end
   
   def report_mspec_core
-    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
+    _mspec
   end
   
   def report_mspec_library
-    "IronRuby: \n#{dmr(data[:ironruby])}\n Ruby: \n#{dmr(data[:ruby])}\n"
+    _mspec
   end
   
 private
+  def _mspec
+    data.map{|k,v| "#{k}:\n#{dmr(v)}\n"}.join(", ")
+  end
+
   # display parsed rubyspec results 
   def dmr(results)
     results.inject(""){ |s,(k,v)| s << "#{k}:\t#{v}\n"; s }
