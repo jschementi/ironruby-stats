@@ -34,7 +34,7 @@ helpers do
   end
   
   def times(data)
-    one, two = data[0], data[1]
+    one, two = data[0].to_f, data[1].to_f
     (one/two > 0 ? -1 * (one/two) : two/one).round_to(2)
   end
   
@@ -44,7 +44,7 @@ helpers do
   end
   
   def total_pass_rate(comp, ref)
-    ((comp[:expectations] -comp[:failures] - comp[:errors]).to_f / ref[:expectations]).round_to(4)
+    ((comp[:expectations].to_i - comp[:failures].to_i - comp[:errors].to_i).to_f / ref[:expectations].to_i).round_to(4)
   end
   
   def grand_total_pass_rate(stats, comp = :ironruby)
