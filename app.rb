@@ -44,7 +44,28 @@ helpers do
   end
   
   def total_pass_rate(comp, ref)
-    ((comp[:expectations] -comp[:failures] - comp[:errors]).to_f / ref[:expectations]).round_to(2)
+    ((comp[:expectations] -comp[:failures] - comp[:errors]).to_f / ref[:expectations]).round_to(4)
+  end
+  
+  def grand_total_pass_rate(stats, comp = :ironruby)
+    totals = {
+      comp => {},
+      :ruby => {}
+    }
+    types = [:expectations, :failures, :errors]
+    specs = [:library, :core, :language]
+
+    totals.each do |lang,_|
+      types.each do |type|
+        specs.each do |spec|
+          totals[lang] ||= {}
+          totals[lang][type] ||= 0
+          totals[lang][type] += stats[:"mspec_#{spec}"][lang][type]
+        end
+      end
+    end
+
+    total_pass_rate(totals[comp], totals[:ruby])
   end
   
   def total_binary_size(binaries)
@@ -59,6 +80,7 @@ end
 get '/' do
   stats = nil
   File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
+    @modification_time = f.mtime
     stats = Marshal.load(f)
   end
   
@@ -88,7 +110,8 @@ __END__
 
 %div
   %a{:href => 'http://github.com/jschementi/ironruby-stats'} generated
-  daily from
+  = @modification_time.strftime("%Y-%m-%d")
+  from
   %a{:href => 'http://github.com/ironruby/ironruby'} IronRuby
 
 %table
@@ -113,10 +136,16 @@ __END__
       %th{:colspan => 2} ir.exe
       %th ruby.exe
       %th diff
-  
   = haml :mspec,:locals => {:title => "Language",:mspec => stats[:mspec_language]},:layout => false
   = haml :mspec,:locals => {:title => "Core",:mspec => stats[:mspec_core]},:layout => false
   = haml :mspec,:locals => {:title => "Library",:mspec => stats[:mspec_library]},:layout => false
+  %thead
+    %tr.sub.right
+      %th all specs pass rate
+      %th{:colspan => 2}= "#{gtir = grand_total_pass_rate(stats) * 100}%"
+      %th= "#{gtrb = grand_total_pass_rate(stats, :ruby) * 100}%"
+      %th= green_or_red(gtir - gtrb, "%")
+  
 
   %thead
     %tr
@@ -146,48 +175,47 @@ __END__
 %thead
   %tr.sub
     %th{:colspan => 5}= title
-  %tbody
-    - if mspec.nil? || mspec.empty?
-      %tr
-        %td
-          No data
-    - else
-      %tr
-        %th time
-        %td{:colspan => 2}= time mspec[:ironruby][:seconds]
-        %td{:colspan => 1}= time mspec[:ruby][:seconds]
-        %td= magnitude mspec[:ironruby][:seconds], mspec[:ruby][:seconds]
-      %tr
-        %th files
-        %td{:colspan => 2}= data mspec[:ironruby][:files]
-        %td{:colspan => 1}= data mspec[:ruby][:files]
-        %td= green_or_red -1 * mspec[:delta][:files]
-      %tr 
-        %th examples
-        %td{:colspan => 2}= data mspec[:ironruby][:examples]
-        %td{:colspan => 1}= data mspec[:ruby][:examples]
-        %td= green_or_red -1 * mspec[:delta][:examples]
-      %tr
-        %th expectations
-        %td{:colspan => 2}= data mspec[:ironruby][:expectations]
-        %td{:colspan => 1}= data mspec[:ruby][:expectations]
-        %td= green_or_red -1 * mspec[:delta][:expectations]
-      %tr
-        %th failures
-        %td{:colspan => 2}= mspec[:ironruby][:failures]
-        %td= mspec[:ruby][:failures]
-        %td= green_or_red mspec[:delta][:failures]
-      %tr
-        %th errors
-        %td{:colspan => 2}= mspec[:ironruby][:errors]
-        %td= mspec[:ruby][:errors]
-        %td= green_or_red mspec[:delta][:errors]
-      %tr
-        %th total pass rate
-        %td{:colspan => 2}= "#{tir = total_pass_rate(mspec[:ironruby], mspec[:ruby]) * 100}%"
-        %td= "#{trb = total_pass_rate(mspec[:ruby], mspec[:ruby]) * 100}%"
-        %td= green_or_red(tir - trb, "%")
-
+%tbody
+  - if mspec.nil? || mspec.empty?
+    %tr
+      %td
+        No data
+  - else
+    %tr
+      %th time
+      %td{:colspan => 2}= time mspec[:ironruby][:seconds]
+      %td{:colspan => 1}= time mspec[:ruby][:seconds]
+      %td= magnitude mspec[:ironruby][:seconds], mspec[:ruby][:seconds]
+    %tr
+      %th files
+      %td{:colspan => 2}= data mspec[:ironruby][:files]
+      %td{:colspan => 1}= data mspec[:ruby][:files]
+      %td= green_or_red -1 * mspec[:delta][:files]
+    %tr 
+      %th examples
+      %td{:colspan => 2}= data mspec[:ironruby][:examples]
+      %td{:colspan => 1}= data mspec[:ruby][:examples]
+      %td= green_or_red -1 * mspec[:delta][:examples]
+    %tr
+      %th expectations
+      %td{:colspan => 2}= data mspec[:ironruby][:expectations]
+      %td{:colspan => 1}= data mspec[:ruby][:expectations]
+      %td= green_or_red -1 * mspec[:delta][:expectations]
+    %tr
+      %th failures
+      %td{:colspan => 2}= mspec[:ironruby][:failures]
+      %td= mspec[:ruby][:failures]
+      %td= green_or_red mspec[:delta][:failures]
+    %tr
+      %th errors
+      %td{:colspan => 2}= mspec[:ironruby][:errors]
+      %td= mspec[:ruby][:errors]
+      %td= green_or_red mspec[:delta][:errors]
+    %tr
+      %th total pass rate
+      %td{:colspan => 2}= "#{tir = total_pass_rate(mspec[:ironruby], mspec[:ruby]) * 100}%"
+      %td= "#{trb = total_pass_rate(mspec[:ruby], mspec[:ruby]) * 100}%"
+      %td= green_or_red(tir - trb, "%")
 
 @@ stylesheet
 body
@@ -214,8 +242,9 @@ table
         :font-size 16px
         :border-bottom 0
         :background-color #222
-      &.right th
-        :text-align right
+      &.right 
+        th, td
+          :text-align right
   tbody
     th
       :background-color #111
