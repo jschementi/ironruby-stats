@@ -60,7 +60,7 @@ helpers do
         specs.each do |spec|
           totals[lang] ||= {}
           totals[lang][type] ||= 0
-          totals[lang][type] += stats[:"mspec_#{spec}"][lang][type]
+          totals[lang][type] += stats[:"mspec_#{spec}"][lang][type].to_i
         end
       end
     end
