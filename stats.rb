@@ -13,8 +13,9 @@ require 'fileutils'
 require 'mymath'
 require 'benchmark'
 
+require 'rubygems'
+
 def dbg
-  require 'rubygems'
   require 'ruby-debug'
   Debugger.start
   debugger
@@ -271,11 +272,15 @@ class DataReporter < BaseReporter
   
     print "Sending file to ironruby.schementi.com ... "
     require 'net/scp'
-    Net::SCP.upload('ironruby.schementi.com', 'jschementi', 
-      filename, 
-      "/home/jschementi/ironruby.schementi.com/data/#{filename.split("/").last}",
-      :password => File.open('pswd'){|f| f.read}
-    )
+    Net::SCP.start(
+      "ironruby.schementi.com", 
+      "jschementi", {
+      :password => File.open("#{File.dirname(__FILE__)}/pswd") do |f| 
+                     f.read
+                   end.chomp
+    }) do |scp|
+      scp.upload! filename, "/home/jschementi/ironruby.schementi.com/data/#{filename.split("/").last}"
+    end
     puts "done"
   end
   
