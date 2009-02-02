@@ -258,12 +258,24 @@ class DataReporter < BaseReporter
     _mspec(:library)
   end
   
+  # serialize @data into a timestamped file in data/, and send (scp)
+  # that file up to the stats website. Looks for the ssh password in
+  # the pswd file 
   def final
     filename = "#{DATA}/data-#{Time.now.strftime("%Y%m%d%H%M%S")}.dat"
     print "Writing #{filename} ... "
     File.open(filename, "wb") do |f|
       Marshal.dump(@data, f)
     end
+    puts "done"
+  
+    print "Sending file to ironruby.schementi.com ... "
+    require 'net/scp'
+    Net::SCP.upload('ironruby.schementi.com', 'jschementi', 
+      filename, 
+      "/home/jschementi/ironruby.schementi.com/data/#{filename.split("/").last}",
+      :password => File.open('pswd'){|f| f.read}
+    )
     puts "done"
   end
   
