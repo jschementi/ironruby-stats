@@ -13,7 +13,11 @@ require 'fileutils'
 require 'mymath'
 require 'benchmark'
 
+require 'net/http'
+require 'uri'
+
 require 'rubygems'
+require 'net/scp'
 
 def dbg
   require 'ruby-debug'
@@ -24,9 +28,6 @@ end
 #
 # Helpers
 #
-
-require 'net/http'
-require 'uri'
 
 module Helpers
   def fetch(uri_str, limit = 10)
@@ -271,7 +272,6 @@ class DataReporter < BaseReporter
     puts "done"
   
     print "Sending file to ironruby.schementi.com ... "
-    require 'net/scp'
     Net::SCP.start(
       "ironruby.schementi.com", 
       "jschementi", {
