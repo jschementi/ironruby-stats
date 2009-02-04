@@ -99,14 +99,14 @@ __END__
 @@ layout
 %html
   %head
-    %title IronRuby Stats
+    %title ironruby.info
     %link{:href => "stylesheet.css", :rel => "stylesheet", :type => "text/css"}
   %body
     =yield
 
 
 @@ index
-%h1 IronRuby Stats
+%h1 ironruby.info
 
 %div
   %a{:href => 'http://github.com/jschementi/ironruby-stats'} generated
