@@ -1,5 +1,9 @@
 require 'rubygems'
-require 'sinatra'
+begin
+  require 'sinatra'
+rescue
+  require 'sinatra'
+end
 
 set :env, :production
 disable :run
