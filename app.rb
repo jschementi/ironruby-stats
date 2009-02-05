@@ -108,6 +108,10 @@ __END__
   = @modification_time.strftime("%Y-%m-%d")
   from
   %a{:href => 'http://github.com/ironruby/ironruby'} IronRuby
+%br
+%div
+  %a{:href => 'http://blog.jimmy.schementi.com/2009/02/ironrubyinfo.html'}
+    What is this page all about?
 
 %table
   %thead
