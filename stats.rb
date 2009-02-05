@@ -12,18 +12,13 @@ MSPEC_OPTIONS = "-Gcritical"
 require 'fileutils'
 require 'mymath'
 require 'benchmark'
-
+require 'win32ole'
 require 'net/http'
 require 'uri'
 
 require 'rubygems'
 require 'net/scp'
-
-def dbg
-  require 'ruby-debug'
-  Debugger.start
-  debugger
-end
+require 'dbg'
 
 #
 # Helpers
@@ -83,6 +78,29 @@ module Stats
     Dir["#{BIN}/*.{exe,dll,config}"].
       delete_if { |f|    f =~ /ClassInitGenerator|Tests/ }.
       inject({}){ |s, f| s[f] = File.size(f); s          }
+  end
+
+  def working_set
+    working_set = 0
+    begin
+      t = Thread.new{ system "#{IR} #{CD}/getpid.rb" }
+      puts "Letting IronRuby run for 5 seconds..."
+      sleep(5)
+      puts "Getting working set"
+      pid = File.open("#{DATA}/pid", 'r'){|f| f.read }
+      processes = WIN32OLE.connect("winmgmts://").ExecQuery(
+        "select * from win32_process where ProcessId = #{pid}")
+      if processes.count == 1
+        processes.each{|p| working_set = p.WorkingSetSize}
+      else
+        puts "*Error: found more than one process with pid==#{pid}"
+      end
+      Thread.kill(t)
+      Process.kill(9, pid)
+    rescue
+      FileUtils.rm "#{DATA}/pid" if File.exist? "#{DATA}/pid"
+    end
+    working_set.to_i
   end
 
   def github_size
@@ -248,6 +266,10 @@ class DataReporter < BaseReporter
     throughput
   end
 
+  def report_working_set
+    working_set
+  end
+
   def report_mspec_language
     _mspec(:language)
   end
@@ -335,6 +357,10 @@ class TextReporter < BaseReporter
     "Throughput: (100000 iterations): #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
   end
   
+  def report_working_set
+    "Working set: #{mb data} MB\n"
+  end
+
   def report_mspec_language
     _mspec
   end
@@ -362,7 +388,7 @@ private
   end
 
   def mb(bytes)
-    bytes./(1_000_000.0).round_to(2)
+    bytes./(1024*1024.0).round_to(2)
   end
 end
 

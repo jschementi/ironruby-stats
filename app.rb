@@ -2,14 +2,9 @@ require 'rubygems'
 require 'sinatra'
 
 require 'mymath'
+require 'dbg'
 
 require 'activesupport'
-
-def dbg
-  require 'ruby-debug'
-  Debugger.start
-  debugger
-end
 
 helpers do
   def time(t)
@@ -73,7 +68,7 @@ helpers do
   end
 
   def mb(bytes)
-    bytes./(1_000_000.0).round_to(2)
+    bytes./(1024*1024.0).round_to(2)
   end
 end
 
@@ -157,6 +152,9 @@ __END__
     %tr
       %th Binary size
       %td{:colspan => 4}= size(total_binary_size(stats[:binsize]))
+    %tr
+      %th Working set
+      %td{:colspan => 4}= size stats[:working_set]
     %tr
       %th Github repository size
       %td{:colspan => 4}= size stats[:repo]

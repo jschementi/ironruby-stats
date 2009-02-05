@@ -1,6 +1,7 @@
 require 'win32ole'
 require 'rubygems'
 require 'win32/process'
+require 'dbg'
 
 puts "Cleaning ..."
 system 'ruby stats.rb --clean'
