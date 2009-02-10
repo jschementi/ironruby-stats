@@ -296,12 +296,12 @@ class DataReporter < BaseReporter
     print "Sending file to ironruby.info ... "
     Net::SCP.start(
       "ironruby.info", 
-      "jschementi", {
+      "iruby", {
       :password => File.open("#{File.dirname(__FILE__)}/pswd") do |f| 
                      f.read
                    end.chomp
     }) do |scp|
-      scp.upload! filename, "/home/jschementi/ironruby.info/data/#{filename.split("/").last}"
+      scp.upload! filename, "/home/iruby/ironruby.info/data/#{filename.split("/").last}"
     end
     puts "done"
   end
