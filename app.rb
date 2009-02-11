@@ -70,16 +70,66 @@ helpers do
   def mb(bytes)
     bytes./(1024*1024.0).round_to(2)
   end
+
+  def fetch_data(scope = :all)
+    files = Dir['data/data-*.dat'].sort
+    (scope == :last ? files.last : files).inject({}) do |stats, file|
+      File.open(file) do |f|
+        stats[f.mtime] = Marshal.load(f)
+      end
+      stats
+    end
+  end
 end
 
 get '/' do
-  stats = nil
-  File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
-    @modification_time = f.mtime
-    stats = Marshal.load(f)
+  stats = fetch_data(:last)
+  @modification_time = stats.keys.sort.last
+  haml :index, :locals => {:stats => stats[@modification_time]}
+end
+
+get '/performance/:key' do
+  require 'google_chart'
+  impl = {:compiled => 'cc4444', :interpreted => 'bb7777', :ruby => 'ff0000', '' => '000000'}
+
+  # fetch all historical data
+  stats = fetch_data
+
+  # group the historical data by each implementation
+  trends = impl.keys.inject({}) do |trends, l|
+    trends[l] = stats.keys.sort.map do |t|
+      s = stats[t][params[:key].to_sym]
+      s[l] || 0
+    end
+    trends
   end
-  
-  haml :index, :locals => {:stats => stats}
+
+  # compute the averages of each implementations historical data
+  avg = trends.inject({}){|h, (k,v)| h[k] = v.inject(0){|sum, x| sum + x}; h }
+  avgs = avg.map{|_,i| i}
+
+  # order the implementations by averages (high to low)
+  impl_order = avg.map{|k,v| [k, v]}.sort{|x,y| y.last <=> x.last}.map{|x| x.first}
+
+
+  haml :performance, :locals => {:graphs => [
+    GoogleChart::LineChart.new('600x500') do |lc|
+      lc.show_legend = true
+
+      lc.fill :background, :solid, :color => '000000'
+
+      lc.axis :y, :range => [avgs.min, avgs.max], :color => 'dddddd'
+      lc.axis :x, :labels => stats.keys.sort.map{|t| t.strftime("%m/%d/%y")}, :color => 'dddddd'
+
+      impl_order.each do |i|
+        lc.data i, trends[i], impl[i]
+      end
+
+      impl_order[0..-2].each_with_index do |o, i|
+        lc.fill_area impl[o], i, i + 1
+      end
+    end
+  ]}
 end
 
 get '/stylesheet.css' do
@@ -95,7 +145,7 @@ __END__
 %html
   %head
     %title ironruby.info
-    %link{:href => "stylesheet.css", :rel => "stylesheet", :type => "text/css"}
+    %link{:href => "/stylesheet.css", :rel => "stylesheet", :type => "text/css"}
   %body
     =yield
 
@@ -125,8 +175,8 @@ __END__
       %th ruby.exe
       %th diff
   %tbody
-    = haml :benchmark,:locals => {:b => stats[:startup],:title => "Startup time",:to_diff => :interpreted}
-    = haml :benchmark,:locals => {:b => stats[:throughput],:title => "100,000 iterations",:to_diff => :compiled}
+    = haml :benchmark,:locals => {:b => stats[:startup],:title => "Startup time",:to_diff => :interpreted,:key => :startup}
+    = haml :benchmark,:locals => {:b => stats[:throughput],:title => "100,000 iterations",:to_diff => :compiled,:key => :throughput}
   %thead
     %tr
       %th{:colspan => 5} RubySpec
@@ -166,12 +216,25 @@ __END__
 
 @@ benchmark
 %tr
-  %th= title
+  %th
+    %a{:href => "/performance/#{key}"}= title
   %td= time(b[:compiled])
   %td= time(b[:interpreted])
   %td= time(b[:ruby])
   %td= magnitude(b[to_diff], b[:ruby])
 
+@@ performance
+%h1 ironruby.info
+
+%div
+  %a{:href => '/'}
+    &laquo; Back
+
+%h2
+  = params[:key].capitalize
+
+- graphs.each do |graph|
+  %img{:src => graph.to_url}
 
 @@ mspec
 %thead

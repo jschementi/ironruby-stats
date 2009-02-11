@@ -1,3 +1,3 @@
-[submodule "frameworks\\rubygems"]
-	path = frameworks\\rubygems
+[submodule "frameworks/rubygems"]
+	path = frameworks/rubygems
 	url = git://github.com/vvs/rubygems.git
