@@ -143,7 +143,7 @@ __END__
       %th all specs pass rate
       %th{:colspan => 2}= "#{gtir = grand_total_pass_rate(stats) * 100}%"
       %th= "#{gtrb = grand_total_pass_rate(stats, :ruby) * 100}%"
-      %th= green_or_red(gtir - gtrb, "%")
+      %th= green_or_red((gtir - gtrb).round_to(2), "%")
   
 
   %thead
@@ -217,7 +217,7 @@ __END__
       %th total pass rate
       %td{:colspan => 2}= "#{tir = total_pass_rate(mspec[:ironruby], mspec[:ruby]) * 100}%"
       %td= "#{trb = total_pass_rate(mspec[:ruby], mspec[:ruby]) * 100}%"
-      %td= green_or_red(tir - trb, "%")
+      %td= green_or_red((tir - trb).round_to(2), "%")
 
 @@ stylesheet
 body
