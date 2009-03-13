@@ -78,7 +78,13 @@ get '/' do
     @modification_time = f.mtime
     stats = Marshal.load(f)
   end
-  
+
+  # FIXME Offset the library ruby expection number by 2300, since
+  # we're not taking into account ruby_bug guards in our numbers,
+  # and that's how many expectations IronRuby runs more that MRI
+  stats[:mspec_library][:ruby][:expectations] += 2300
+  stats[:mspec_library][:delta][:expectations] += 2300
+
   haml :index, :locals => {:stats => stats}
 end
 
@@ -201,7 +207,9 @@ __END__
     %tr
       %th expectations
       %td{:colspan => 2}= data mspec[:ironruby][:expectations]
-      %td{:colspan => 1}= data mspec[:ruby][:expectations]
+      %td{:colspan => 1}
+        %span= data mspec[:ruby][:expectations]
+        %a{:href => 'javascript:void(0)', :onclick => "alert('The Ruby exceptions number is inflated by 2300, because RubySpec does not run that number of tests on Ruby, but will run on IronRuby. This prevents the IronRuby pass-rate for libraries from looking inflated.')"} ?
       %td= green_or_red -1 * mspec[:delta][:expectations]
     %tr
       %th failures
