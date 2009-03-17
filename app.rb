@@ -209,7 +209,8 @@ __END__
       %td{:colspan => 2}= data mspec[:ironruby][:expectations]
       %td{:colspan => 1}
         %span= data mspec[:ruby][:expectations]
-        %a{:href => 'javascript:void(0)', :onclick => "alert('The Ruby exceptions number is inflated by 2300, because RubySpec does not run that number of tests on Ruby, but will run on IronRuby. This prevents the IronRuby pass-rate for libraries from looking inflated.')"} ?
+        - if title == "Library"
+            %a{:href => 'javascript:void(0)', :onclick => "alert('The Ruby exceptions number is inflated by 2300, because RubySpec does not run that number of tests on Ruby, but will run on IronRuby. This prevents the IronRuby pass-rate for libraries from looking inflated.')"} ?
       %td= green_or_red -1 * mspec[:delta][:expectations]
     %tr
       %th failures
