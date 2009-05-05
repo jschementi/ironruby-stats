@@ -7,7 +7,7 @@ DATA = "#{CD}/data"
 INTERPRET = "-X:Interpret"
 IR = "#{BIN}/ir.exe"
 MSPEC = "mspec.bat run -fs"
-MSPEC_OPTIONS = "-Gcritical"
+MSPEC_OPTIONS = "-Gcritical -Gthread"
 
 require 'fileutils'
 require 'mymath'
