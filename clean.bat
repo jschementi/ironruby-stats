@@ -1,1 +1,0 @@
-ruby stats.rb --clean
