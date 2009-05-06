@@ -1,7 +1,7 @@
 require 'benchmark'
 
 result = Benchmark.measure do
-  $a = 1; 100000.times{|i| $a *= 2}	
+  100000.times{|i| i + 1}	
 end
 
 print result.real
