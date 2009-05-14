@@ -1,7 +1,8 @@
-require 'rubygems'
 begin
+  require 'rubygems'
   require 'sinatra'
-rescue
+rescue LoadError
+  require 'rubygems'
   require 'sinatra'
 end
 
