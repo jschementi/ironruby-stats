@@ -1,0 +1,53 @@
+body
+  :background-color #000
+  :color #fff
+  :font-family Consolas, "Lucida Console", Arial
+  :font-size 14px
+  :text-align center
+h1
+  :border-bottom 2px solid #333
+table
+  :margin-left auto
+  :margin-right auto
+  :text-align left
+  thead
+    tr
+      th
+        :font-size 18px
+        :border-bottom 2px solid #333
+        :padding 5px
+        :padding-top 30px
+      &.sub th
+        :padding 5px
+        :font-size 16px
+        :border-bottom 0
+        :background-color #222
+      &.right 
+        th, td
+          :text-align right
+  tbody
+    th
+      :background-color #111
+      :text-align left
+      
+    th, td
+      :padding 5px
+    td
+      :text-align right
+.fail
+  :color red
+.pass
+  :color green
+div
+  :padding 5px
+  :margin-left auto
+  :margin-right auto
+  :position relative
+a
+  :color white
+  :padding 3px
+  :text-decoration none
+  &:link, &:visited
+    :background-color #222
+  &:hover
+    :background-color #555

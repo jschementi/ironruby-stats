@@ -1,0 +1,6 @@
+%tr
+  %th= title
+  %td{:colspan => 2}= time(b[:compiled])
+  %td= time(b[:ruby])
+  %td= magnitude(b[:compiled], b[:ruby])
+

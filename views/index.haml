@@ -1,0 +1,61 @@
+%h1 ironruby.info
+
+%div
+  %a{:href => 'http://github.com/jschementi/ironruby-stats'} generated
+  = @modification_time.strftime("%Y-%m-%d")
+  from
+  %a{:href => 'http://github.com/ironruby/ironruby'} IronRuby
+%br
+%div
+  %a{:href => 'http://blog.jimmy.schementi.com/2009/02/ironrubyinfo.html'}
+    What is this page all about?
+
+%table
+  %thead
+    %tr
+      %th{:colspan => 5} RubySpec
+    %tr.sub.right
+      %th{:colspan => 1}
+      %th{:colspan => 2} ir.exe
+      %th ruby.exe
+      %th diff
+  %tbody
+    %tr
+      %th all specs pass rate
+      %th{:colspan => 2}= "#{gtir = grand_total_pass_rate(stats) * 100}%"
+      %th= "#{gtrb = grand_total_pass_rate(stats, :ruby) * 100}%"
+      %th= green_or_red((gtir - gtrb).round_to(2), "%")
+  = haml :mspec,:locals => {:title => "Language",:mspec => stats[:mspec_language]},:layout => false
+  = haml :mspec,:locals => {:title => "Core",:mspec => stats[:mspec_core]},:layout => false
+  = haml :mspec,:locals => {:title => "Library",:mspec => stats[:mspec_library]},:layout => false
+  
+  %thead
+    %tr
+      %th{:colspan => 5}
+        Performance
+    %tr.sub.right
+      %th
+      %th{:colspan => 2} ir.exe
+      %th ruby.exe
+      %th diff
+  %tbody
+    = haml :benchmark,:locals => {:b => stats[:startup],:title => "Startup time"}
+    = haml :benchmark,:locals => {:b => stats[:throughput],:title => "100,000 iterations"}
+
+  %thead
+    %tr
+      %th{:colspan => 5} Fun facts
+  %tbody
+    %tr
+      %th Build time
+      %td{:colspan => 4}= time stats[:build]
+    %tr
+      %th Binary size
+      %td{:colspan => 4}= size(total_binary_size(stats[:binsize]))
+    %tr
+      %th Working set
+      %td{:colspan => 4}= size stats[:working_set]
+    %tr
+      %th Github repository size
+      %td{:colspan => 4}= size stats[:repo]
+
