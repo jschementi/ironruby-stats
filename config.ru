@@ -1,8 +1,14 @@
 begin
   require 'rubygems'
-  require 'sinatra'
 rescue LoadError
   require 'rubygems'
+end
+
+begin
+  gem 'sinatra'
+  require 'sinatra'
+rescue LoadError
+  gem 'sinatra'
   require 'sinatra'
 end
 

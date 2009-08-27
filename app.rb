@@ -1,5 +1,16 @@
-require 'rubygems'
-require 'sinatra'
+begin
+  require 'rubygems'
+rescue LoadError
+  require 'rubygems'
+end
+
+begin
+  gem 'sinatra'
+  require 'sinatra'
+rescue LoadError
+  gem 'sinatra'
+  require 'sinatra'
+end
 
 require 'mymath'
 require 'dbg'
@@ -30,7 +41,13 @@ helpers do
   
   def times(data)
     one, two = data[0].to_f, data[1].to_f
-    (one/two > 0 ? -1 * (one/two) : two/one).round_to(2)
+    if one/two > 0
+      return 0.0 if two == 0.0
+      -1 * (one/two)
+    else
+      return 0.0 if one == 0.0
+      two/one
+    end.round_to(2)
   end
   
   def green_or_red(data, append = "")
