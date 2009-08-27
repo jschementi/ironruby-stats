@@ -31,19 +31,6 @@
   
   %thead
     %tr
-      %th{:colspan => 5}
-        Performance
-    %tr.sub.right
-      %th
-      %th{:colspan => 2} ir.exe
-      %th ruby.exe
-      %th diff
-  %tbody
-    = haml :benchmark,:locals => {:b => stats[:startup],:title => "Startup time"}
-    = haml :benchmark,:locals => {:b => stats[:throughput],:title => "100,000 iterations"}
-
-  %thead
-    %tr
       %th{:colspan => 5} Fun facts
   %tbody
     %tr
