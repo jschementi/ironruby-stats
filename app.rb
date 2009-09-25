@@ -1,16 +1,5 @@
-begin
-  require 'rubygems'
-rescue LoadError
-  require 'rubygems'
-end
-
-begin
-  gem 'sinatra'
-  require 'sinatra'
-rescue LoadError
-  gem 'sinatra'
-  require 'sinatra'
-end
+require 'rubygems'
+require 'sinatra'
 
 require 'mymath'
 require 'dbg'
