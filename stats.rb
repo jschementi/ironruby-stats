@@ -1,15 +1,25 @@
 load 'config.rb'
 
+class String
+  def to_dos
+    self.gsub('/', '\\')
+  end
+end
+
 RB = "#{REPO}/Merlin/Main/Languages/Ruby"
-BIN = "#{REPO}/Merlin/Main/Bin/debug"
+BIN = "#{REPO}/Merlin/Main/Bin/Release"
+MRI_BIN = "#{REPO}/Merlin/External.LCA_RESTRICTED/Languages/Ruby/ruby-1.8.6p368/bin"
+ENV['PATH'] = [MRI_BIN.to_dos, BIN.to_dos, ENV['PATH']].join(';')
 CD = File.expand_path(File.dirname(__FILE__))
 DATA = "#{CD}/data"
-INTERPRET = "-X:Interpret"
-IR = "#{BIN}/ir.exe"
-MSPEC = "mspec.bat run -fs"
-MSPEC_OPTIONS = "-Gcritical -Gthread"
-
 require 'fileutils'
+FileUtils.mkdir DATA unless File.exist? DATA
+INTERPRET = "-X:CompilationThreshold 1000000000"
+IR = "#{BIN}/ir.exe"
+MRI = "#{MRI_BIN}/ruby.exe"
+MSPEC = "mspec.bat run -fs"
+MSPEC_OPTIONS = {:ironruby => "-Gcritical -Gunstable -Gruby", :ruby => '-Gruby'}
+
 require 'mymath'
 require 'benchmark'
 require 'win32ole'
@@ -63,11 +73,23 @@ end
 
 module Stats
   include Helpers
-  
+ 
+  def to_dos(str)
+    str.to_dos
+  end
+
+  def ir(file, opts = nil)
+    `#{IR.to_dos} #{opts if opts} #{file.to_dos}`
+  end
+
+  def mri(file, opts = nil)
+    `#{MRI.to_dos} #{opts if opts} #{file.to_dos}`
+  end
+
   def build
     print "Building IronRuby ... "
     result = Benchmark.measure do
-      FileUtils.cd(RB) { system "rake compile > #{DATA}/compile.log 2>&1" }
+      FileUtils.cd(RB) { system "msbuild Ruby.sln /p:Configuration=Release /v:m /nologo > #{DATA.to_dos}\\compile.log 2>&1" }
     end
     puts "done"
     result.real
@@ -83,11 +105,11 @@ module Stats
   def working_set
     working_set = 0
     begin
-      t = Thread.new{ system "#{IR} #{CD}/getpid.rb" }
+      t = Thread.new{ system "#{IR.to_dos} #{to_dos "#{CD}/getpid.rb"}" }
       puts "Letting IronRuby run for 5 seconds..."
       sleep(5)
       puts "Getting working set"
-      pid = File.open("#{DATA}/pid", 'r'){|f| f.read }
+      pid = File.open("#{DATA}/pid".to_dos, 'r'){|f| f.read }
       processes = WIN32OLE.connect("winmgmts://").ExecQuery(
         "select * from win32_process where ProcessId = #{pid}")
       if processes.count == 1
@@ -112,15 +134,9 @@ module Stats
     c = i = r = 0
     iters = 10.0
     iters.to_i.times do
-      c += Benchmark.measure do
-        `#{IR} #{CD}/empty.rb`
-      end.real
-      i += Benchmark.measure do
-        `#{IR} #{INTERPRET} #{CD}/empty.rb`
-      end.real
-      r += Benchmark.measure do
-        `ruby #{CD}/empty.rb`
-      end.real
+      c += Benchmark.measure { ir "#{CD}/empty.rb" }.real
+      i += Benchmark.measure { ir "#{CD}/empty.rb", INTERPRET }.real
+      r += Benchmark.measure { mri "#{CD}/empty.rb" }.real
     end
     c, i, r = [c,i,r].map{|i| i / iters}
     delta = r - (c < i ? c : i)
@@ -133,9 +149,9 @@ module Stats
     c = i = r = 0
     iters = 10.0
     iters.to_i.times do
-      i += `#{IR} #{INTERPRET} #{CD}/loop.rb`.to_f
-      c += `#{IR} #{CD}/loop.rb`.to_f
-      r += `ruby #{CD}/loop.rb`.to_f
+      i += ir("#{CD}/loop.rb", INTERPRET).to_f
+      c += ir("#{CD}/loop.rb").to_f
+      r += mri("#{CD}/loop.rb").to_f
     end
     c, i, r = [c,i,r].map{|i| i / iters}
     delta = r - (c < i ? c : i)
@@ -145,17 +161,21 @@ module Stats
   
   def mspec(type = nil, impl = nil)
     type ||= :core
+    impl ||= :ironruby
     
-    print "Running mspec:#{type} with #{impl || 'ironruby'} ... "
+    print "Running mspec:#{type} with #{impl} ... "
 
-    log = "#{DATA}/mspec_#{type}#{"_#{impl}" if impl}.log"
-    
+    log = "#{DATA}/mspec_#{type}_#{impl}.log"
+
     # since running mspec takes a while, only run if the log file is not present
     unless File.exist? log
       results = nil
-      FileUtils.cd(RB) do
-        # To run interpreter: -T'#{INTERPRET}'
-        system "#{MSPEC} #{MSPEC_OPTIONS if impl != :ruby} #{"--target #{impl}" if impl} #{type} > #{log} 2>&1"
+      old = FileUtils.pwd
+      begin
+        FileUtils.cd RB
+        system "#{MSPEC} #{MSPEC_OPTIONS[impl]} --target #{impl} #{type} 1> #{log.to_dos} 2>&1"
+      ensure
+        FileUtils.cd old
       end
     end
     puts "done"
@@ -293,16 +313,17 @@ class DataReporter < BaseReporter
     end
     puts "done"
   
-    print "Sending file to ironruby.info ... "
-    Net::SCP.start(
-      "ironruby.info", 
-      "iruby", {
-      :password => File.open("#{File.dirname(__FILE__)}/pswd") do |f| 
-                     f.read
-                   end.chomp
-    }) do |scp|
-      scp.upload! filename, "/home/iruby/ironruby.info/data/#{filename.split("/").last}"
-    end
+    # TODO: re-enable uploading the dat file
+    #print "Sending file to ironruby.info ... "
+    #Net::SCP.start(
+    #  "ironruby.info", 
+    #  "iruby", {
+    #  :password => File.open("#{File.dirname(__FILE__)}/pswd") do |f| 
+    #                 f.read
+    #               end.chomp
+    #}) do |scp|
+    #  scp.upload! filename, "/home/iruby/ironruby.info/data/#{filename.split("/").last}"
+    #end
     puts "done"
   end
   
@@ -310,7 +331,7 @@ private
   def _mspec(scope)
     ir = mspec(scope)
     ru = mspec(scope, :ruby)
-    delta = ir.inject({}){|r,(k,v)| r[k] = ru[k] - ir[k]; r}
+    delta = ir.inject({}){|r,(k,v)| r[k] = ru[k] - ir[k]; r} if !ir.nil? && !ru.nil?
     {:ironruby => ir, :ruby => ru, :delta => delta}
   end
 end

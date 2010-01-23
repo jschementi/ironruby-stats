@@ -2,4 +2,4 @@
 # The path on disk to where an IronRuby repository is
 #
 
-REPO = "C:/vsl/m1"
+REPO = "C:/dev/vsl1s"
