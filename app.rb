@@ -1,10 +1,11 @@
+File.open('data/pid1', 'w'){ |f| f.print Process.pid }
+
 require 'rubygems'
 require 'sinatra'
 
 require 'mymath'
-require 'dbg'
 
-require 'activesupport'
+require 'active_support'
 
 helpers do
   def time(t)

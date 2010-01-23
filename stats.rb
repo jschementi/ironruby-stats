@@ -1,4 +1,11 @@
 load 'config.rb'
+require 'rubygems'
+require 'mymath'
+require 'benchmark'
+require 'win32ole'
+require 'net/http'
+require 'uri'
+#require 'net/scp'
 
 class String
   def to_dos
@@ -19,16 +26,6 @@ IR = "#{BIN}/ir.exe"
 MRI = "#{MRI_BIN}/ruby.exe"
 MSPEC = "mspec.bat run -fs"
 MSPEC_OPTIONS = {:ironruby => "-Gcritical -Gunstable -Gruby", :ruby => '-Gruby'}
-
-require 'mymath'
-require 'benchmark'
-require 'win32ole'
-require 'net/http'
-require 'uri'
-
-require 'rubygems'
-require 'net/scp'
-require 'dbg'
 
 #
 # Helpers
@@ -109,7 +106,7 @@ module Stats
       puts "Letting IronRuby run for 5 seconds..."
       sleep(5)
       puts "Getting working set"
-      pid = File.open("#{DATA}/pid".to_dos, 'r'){|f| f.read }
+      pid = File.open("#{DATA}/pid".to_dos, 'r'){|f| f.read }.to_i
       processes = WIN32OLE.connect("winmgmts://").ExecQuery(
         "select * from win32_process where ProcessId = #{pid}")
       if processes.count == 1
@@ -119,7 +116,7 @@ module Stats
       end
       Thread.kill(t)
       Process.kill(9, pid)
-    rescue
+    ensure
       FileUtils.rm "#{DATA}/pid" if File.exist? "#{DATA}/pid"
     end
     working_set.to_i
@@ -306,25 +303,16 @@ class DataReporter < BaseReporter
   # that file up to the stats website. Looks for the ssh password in
   # the pswd file 
   def final
-    filename = "#{DATA}/data-#{Time.now.strftime("%Y%m%d%H%M%S")}.dat"
+    date = Time.now.strftime("%Y%m%d%H%M%S")
+    filename = "#{DATA}/data-#{date}.dat"
     print "Writing #{filename} ... "
     File.open(filename, "wb") do |f|
       Marshal.dump(@data, f)
     end
     puts "done"
-  
-    # TODO: re-enable uploading the dat file
-    #print "Sending file to ironruby.info ... "
-    #Net::SCP.start(
-    #  "ironruby.info", 
-    #  "iruby", {
-    #  :password => File.open("#{File.dirname(__FILE__)}/pswd") do |f| 
-    #                 f.read
-    #               end.chomp
-    #}) do |scp|
-    #  scp.upload! filename, "/home/iruby/ironruby.info/data/#{filename.split("/").last}"
-    #end
-    puts "done"
+
+    _upload_html(*_save_html(date))
+    # _scp_data(filename)
   end
   
 private
@@ -333,6 +321,68 @@ private
     ru = mspec(scope, :ruby)
     delta = ir.inject({}){|r,(k,v)| r[k] = ru[k] - ir[k]; r} if !ir.nil? && !ru.nil?
     {:ironruby => ir, :ruby => ru, :delta => delta}
+  end
+
+  def _save_html(date)
+    print "Generating http://ironruby.info homepage "
+    _kill 'pid1' 
+    t = Thread.new { system "#{Gem.ruby} #{(File.dirname(__FILE__) + '/app.rb').to_dos}" }
+    require 'net/http'
+    10.times do
+      sleep 1
+      begin
+        url = URI.parse("http://#{Socket.gethostname}:4567")
+        res = Net::HTTP.start(url.host, url.port) {|http| http.get '/' }
+        raise res.code_type.exception_type unless res.kind_of? Net::HTTPOK
+        html = res.body
+        filename = "#{DATA}/index-#{date}.html"
+        indexfile = File.dirname(filename) + '/index.html'
+        File.open(filename, 'w'){|f| f.write html }
+        FileUtils.rm indexfile if File.exist? indexfile
+        FileUtils.cp filename, indexfile
+        puts " done"
+        return [filename, indexfile]
+      rescue
+        print '.'
+      end
+    end
+    raise "Timeout generating HTML"
+  ensure
+    _kill 'pid1', t
+  end
+
+  def _kill(pidfile, t = nil)
+    pidfile = "#{DATA}/#{pidfile}"
+    return unless File.exist?(pidfile)
+    pid = File.open(pidfile, 'r'){|f| f.read }.to_i
+    Thread.kill(t) if t
+    Process.kill(9, pid)
+  rescue
+    # noop
+  ensure
+    FileUtils.rm pidfile if File.exist?(pidfile)
+  end
+
+  def _upload_html(filename, indexfile)
+    print "Uploading ironruby.info homepage ... "
+    require 'net/ftp'
+    ftp = Net::FTP.new("ironruby.com")
+    ftp.login('ironruby', _get_pswd)
+    ftp.chdir('info')
+    ftp.puttextfile filename
+    ftp.puttextfile indexfile
+  end
+
+  def _get_pswd
+    File.open("#{File.dirname(__FILE__)}/pswd"){|f| f.read}.chomp
+  end
+
+  def _scp_data(filename)
+    print "Sending file to ironruby.info ... "
+    Net::SCP.start("ironruby.info", "iruby", :password => _get_pswd) do |scp|
+      scp.upload! filename, "/home/iruby/ironruby.info/data/#{filename.split("/").last}"
+    end
+    puts "done"
   end
 end
 
@@ -415,64 +465,68 @@ end
 
 $default_reporter = DataReporter.new
 
-#
-# Run the report
-#
+if __FILE__ == $0
 
-$behavior = {
-  ['--help', '-h']     => lambda { puts usage; exit },
-  ['--all']            => lambda { $default_reporter.run :all },
-  ['--clean']          => lambda { clean },
-  [/--reporter=(.*)/]  => lambda do |r|
-      $default_reporter = eval(r[1].capitalize + "Reporter").new
-    end,
-}.merge(
-  # generate a '--#{name}' and '--skip-#{name}' option for each report
-  $default_reporter.reports.inject({}) do |opts, name|
-    opts[["--#{name}"]]      = lambda { $default_reporter.run name.to_sym }
-    opts[["--skip-#{name}"]] = lambda { $default_reporter.skip name.to_sym }
-    opts
+  #
+  # Run the report
+  #
+
+  $behavior = {
+    ['--help', '-h']     => lambda { puts usage; exit },
+    ['--all']            => lambda { $default_reporter.run :all },
+    ['--clean']          => lambda { clean },
+    [/--reporter=(.*)/]  => lambda do |r|
+        $default_reporter = eval(r[1].capitalize + "Reporter").new
+      end,
+  }.merge(
+    # generate a '--#{name}' and '--skip-#{name}' option for each report
+    $default_reporter.reports.inject({}) do |opts, name|
+      opts[["--#{name}"]]      = lambda { $default_reporter.run name.to_sym }
+      opts[["--skip-#{name}"]] = lambda { $default_reporter.skip name.to_sym }
+      opts
+    end
+  )
+
+  def clean
+    remove_all = lambda{ |path| Dir[path].each{ |f| FileUtils.rm f } }
+
+    print 'removing log files ... '
+    remove_all.call "#{DATA}/*.log"
+    puts 'done'
+
+    print 'removing zip files ... '
+    remove_all.call "#{DATA}/*.zip"
+    puts 'done'
   end
-)
 
-def clean
-  remove_all = lambda{ |path| Dir[path].each{ |f| FileUtils.rm f } }
+  def usage
+    o = "usage:\n  ruby #{__FILE__}"
+    $behavior.map{|opts, _| ' [' + opts.join('|') + ']'}.each{|i| o << i}
+    o
+  end
 
-  print 'removing log files ... '
-  remove_all.call "#{DATA}/*.log"
-  puts 'done'
+  if ARGV.empty?
+    puts usage
+  end
 
-  print 'removing zip files ... '
-  remove_all.call "#{DATA}/*.zip"
-  puts 'done'
-end
-
-def usage
-  o = "usage:\n  ruby #{__FILE__}"
-  $behavior.map{|opts, _| ' [' + opts.join('|') + ']'}.each{|i| o << i}
-  o
-end
-
-if ARGV.empty?
-  puts usage
-end
-
-ARGV.each do |arg|
-  found = false
-  
-  $behavior.each do |options, lmbd|
-    if options.include?(arg)
-      found = true
-      lmbd.call
-    elsif options.select{|o| o.kind_of?(Regexp) && arg =~ o}.size == 1
-      found = true
-      lmbd.call($~)
+  ARGV.each do |arg|
+    found = false
+    
+    $behavior.each do |options, lmbd|
+      if options.include?(arg)
+        found = true
+        lmbd.call
+      elsif options.select{|o| o.kind_of?(Regexp) && arg =~ o}.size == 1
+        found = true
+        lmbd.call($~)
+      end
+    end
+    
+    unless found
+      puts "Unknown argument '#{arg}'"
+      puts usage
+      exit
     end
   end
-  
-  unless found
-    puts "Unknown argument '#{arg}'"
-    puts usage
-    exit
-  end
+
 end
