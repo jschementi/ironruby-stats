@@ -5,8 +5,10 @@ A script for capturing interesting statistics about IronRuby
 
 Pre-requisites
 --------------
-1. git clone git://github.com/ironruby/ironruby.git
-2. Set up IronRuby for building: http://wiki.github.com/ironruby/ironruby
+1. Ruby (MRI)
+2. An IronRuby repository
+
+    git clone git://github.com/ironruby/ironruby.git
 
 Configuration
 -------------
@@ -17,12 +19,17 @@ your REPO value:
 
 REPO = 'c:/dev/ironruby'
 
+Also, update "MRI_BIN" with the path to your ruby.exe:
+
+MRI_BIN = 'c:\ruby\bin'
+
 Example
 -------
 
 > ruby stats.rb --all
 
-Runs all reports, and writes results to a .dat file.
+Runs all reports, writes results to a .dat file, generates a HTML file, and
+attemps to upload both the html file and the dat file to ironruby.info.
 "ruby stats.rb --reporter=data --all" will do the same thing.
 
 > ruby stats.rb --reporter=text --all

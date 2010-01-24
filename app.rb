@@ -1,10 +1,9 @@
-File.open('data/pid1', 'w'){ |f| f.print Process.pid }
+File.open(File.dirname(__FILE__) + '/data/pid1', 'w'){ |f| f.print Process.pid }
 
 require 'rubygems'
 require 'sinatra'
-
-require 'mymath'
-
+require 'haml'
+require 'ext'
 require 'active_support'
 
 helpers do

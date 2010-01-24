@@ -1,37 +1,33 @@
+$: << File.expand_path(File.dirname(__FILE__))
+
 load 'config.rb'
+
 require 'rubygems'
-require 'mymath'
+require 'ext'
 require 'benchmark'
 require 'win32ole'
-require 'net/http'
-require 'uri'
-#require 'net/scp'
-
-class String
-  def to_dos
-    self.gsub('/', '\\')
-  end
-end
 
 RB = "#{REPO}/Merlin/Main/Languages/Ruby"
 BIN = "#{REPO}/Merlin/Main/Bin/Release"
-MRI_BIN = "#{REPO}/Merlin/External.LCA_RESTRICTED/Languages/Ruby/ruby-1.8.6p368/bin"
 ENV['PATH'] = [MRI_BIN.to_dos, BIN.to_dos, ENV['PATH']].join(';')
 CD = File.expand_path(File.dirname(__FILE__))
-DATA = "#{CD}/data"
-require 'fileutils'
-FileUtils.mkdir DATA unless File.exist? DATA
 INTERPRET = "-X:CompilationThreshold 1000000000"
 IR = "#{BIN}/ir.exe"
 MRI = "#{MRI_BIN}/ruby.exe"
 MSPEC = "mspec.bat run -fs"
 MSPEC_OPTIONS = {:ironruby => "-Gcritical -Gunstable -Gruby", :ruby => '-Gruby'}
+DATA = "#{CD}/data"
+require 'fileutils'
+FileUtils.mkdir DATA unless File.exist? DATA
 
 #
 # Helpers
 #
 
 module Helpers
+  require 'net/http'
+  require 'uri'
+  
   def fetch(uri_str, limit = 10)
     raise ArgumentError, 'HTTP redirect too deep' if limit == 0
 
@@ -159,6 +155,7 @@ module Stats
   def mspec(type = nil, impl = nil)
     type ||= :core
     impl ||= :ironruby
+    impl_bin = impl == :ironruby ? IR : MRI
     
     print "Running mspec:#{type} with #{impl} ... "
 
@@ -170,7 +167,7 @@ module Stats
       old = FileUtils.pwd
       begin
         FileUtils.cd RB
-        system "#{MSPEC} #{MSPEC_OPTIONS[impl]} --target #{impl} #{type} 1> #{log.to_dos} 2>&1"
+        system "#{MSPEC} #{MSPEC_OPTIONS[impl]} -B#{ "#{CD}/stats.config".to_dos } --target=#{impl_bin.to_dos} #{type} 1> #{log.to_dos} 2>&1"
       ensure
         FileUtils.cd old
       end
@@ -299,20 +296,10 @@ class DataReporter < BaseReporter
     _mspec(:library)
   end
   
-  # serialize @data into a timestamped file in data/, and send (scp)
-  # that file up to the stats website. Looks for the ssh password in
-  # the pswd file 
   def final
     date = Time.now.strftime("%Y%m%d%H%M%S")
-    filename = "#{DATA}/data-#{date}.dat"
-    print "Writing #{filename} ... "
-    File.open(filename, "wb") do |f|
-      Marshal.dump(@data, f)
-    end
-    puts "done"
-
+    _save_dat(date)
     _upload_html(*_save_html(date))
-    # _scp_data(filename)
   end
   
 private
@@ -321,6 +308,15 @@ private
     ru = mspec(scope, :ruby)
     delta = ir.inject({}){|r,(k,v)| r[k] = ru[k] - ir[k]; r} if !ir.nil? && !ru.nil?
     {:ironruby => ir, :ruby => ru, :delta => delta}
+  end
+
+  def _save_dat(date)
+    filename = "#{DATA}/data-#{date}.dat"
+    print "Writing #{filename} ... "
+    File.open(filename, "wb") do |f|
+      Marshal.dump(@data, f)
+    end
+    puts "done"
   end
 
   def _save_html(date)
