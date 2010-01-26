@@ -80,9 +80,9 @@ module Stats
   end
 
   def build
-    print "Building IronRuby ... "
+    print "Building IronRuby (release mode) ... "
     result = Benchmark.measure do
-      FileUtils.cd(RB) { system "msbuild Ruby.sln /p:Configuration=Release /v:m /nologo > #{DATA.to_dos}\\compile.log 2>&1" }
+      FileUtils.cd(RB) { system "msbuild Ruby.sln /p:Configuration=Release /nologo > #{DATA.to_dos}\\compile.log 2>&1" }
     end
     puts "done"
     result.real
@@ -99,9 +99,17 @@ module Stats
     working_set = 0
     begin
       t = Thread.new{ system "#{IR.to_dos} #{to_dos "#{CD}/getpid.rb"}" }
-      puts "Letting IronRuby run for 5 seconds..."
-      sleep(5)
-      puts "Getting working set"
+      print "Running for 5 seconds to get working set "
+      count, done = 0, 4
+      loop { sleep(1); print '.'; break if (count += 1) > done }
+      count, timeout = 0, 19
+      loop do
+        break if File.exist?("#{DATA}/pid")
+        raise "Timeout getting working set" if (count += 1) > timeout
+        sleep(1)
+        print '.'
+      end
+      puts ' found'
       pid = File.open("#{DATA}/pid".to_dos, 'r'){|f| f.read }.to_i
       processes = WIN32OLE.connect("winmgmts://").ExecQuery(
         "select * from win32_process where ProcessId = #{pid}")
@@ -272,13 +280,13 @@ class DataReporter < BaseReporter
     github_size
   end
 
-  def report_startup
-    startup_time
-  end
+  #def report_startup
+  #  startup_time
+  #end
 
-  def report_throughput
-    throughput
-  end
+  #def report_throughput
+  #  throughput
+  #end
 
   def report_working_set
     working_set
@@ -360,13 +368,19 @@ private
   end
 
   def _upload_html(filename, indexfile)
-    print "Uploading ironruby.info homepage ... "
+    print "Connecting to ironruby.info ... "
     require 'net/ftp'
     ftp = Net::FTP.new("ironruby.com")
     ftp.login('ironruby', _get_pswd)
+    ftp.passive = true
     ftp.chdir('info')
+    puts 'done'
+    print "Uploading #{filename} to http://ironruby.info/#{File.basename(filename)} ... "
     ftp.puttextfile filename
+    puts 'done'
+    print "Uploading #{indexfile} to http://ironruby.info/#{File.basename(indexfile)} ... "
     ftp.puttextfile indexfile
+    puts 'done'
   end
 
   def _get_pswd
@@ -416,13 +430,13 @@ class TextReporter < BaseReporter
     "Github repo size: #{mb(data)} MB\n"
   end
   
-  def report_startup
-    "Startup time: #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
-  end
+  #def report_startup
+  #  "Startup time: #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
+  #end
 
-  def report_throughput
-    "Throughput: (100000 iterations): #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
-  end
+  #def report_throughput
+  #  "Throughput: (100000 iterations): #{data.map{|k,v| "#{k}(#{v} s)"}.join(", ")}\n"
+  #end
   
   def report_working_set
     "Working set: #{mb data} MB\n"
@@ -525,4 +539,5 @@ if __FILE__ == $0
     end
   end
 
+  puts "SUCCESS!"
 end

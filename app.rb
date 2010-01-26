@@ -1,5 +1,7 @@
 File.open(File.dirname(__FILE__) + '/data/pid1', 'w'){ |f| f.print Process.pid }
 
+$: << File.expand_path(File.dirname(__FILE__))
+
 require 'rubygems'
 require 'sinatra'
 require 'haml'
@@ -45,7 +47,7 @@ helpers do
   end
   
   def total_pass_rate(comp, ref)
-    ((comp[:expectations].to_i - comp[:failures].to_i - comp[:errors].to_i).to_f / ref[:expectations].to_i).round_to(4)
+    ((comp[:examples].to_i - comp[:failures].to_i - comp[:errors].to_i).to_f / comp[:examples].to_i).round_to(4)
   end
   
   def grand_total_pass_rate(stats, comp = :ironruby)
@@ -53,7 +55,7 @@ helpers do
       comp => {},
       :ruby => {}
     }
-    types = [:expectations, :failures, :errors]
+    types = [:expectations, :failures, :errors, :examples]
     specs = [:library, :core, :language]
 
     totals.each do |lang,_|
@@ -80,17 +82,10 @@ end
 
 get '/' do
   stats = nil
-  File.open(Dir['data/data-*.dat'].sort.last, "rb") do |f|
+  File.open(Dir[File.dirname(__FILE__) + '/data/data-*.dat'].sort.last, "rb") do |f|
     @modification_time = f.mtime
     stats = Marshal.load(f)
   end
-
-  # FIXME Offset the library ruby expection number by 2300, since
-  # we're not taking into account ruby_bug guards in our numbers,
-  # and that's how many expectations IronRuby runs more that MRI
-  stats[:mspec_library][:ruby][:expectations] += 2300
-  stats[:mspec_library][:delta][:expectations] += 2300
-
   haml :index, :locals => {:stats => stats}
 end
 
